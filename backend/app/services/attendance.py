@@ -2,7 +2,8 @@
 """Attendance service — check-in/out, status derivation, queries."""
 
 import uuid
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timezone, timedelta
+import httpx
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -13,6 +14,27 @@ from app.models.attendance import Attendance
 from app.models.leave_request import LeaveRequest
 from app.schemas.attendance import AttendanceListOut, AttendanceOut
 
+_TIME_API_URL = "https://timeapi.io/api/time/current/zone"
+_IST_TIMEZONE = "Asia/Calcutta"
+
+async def _get_current_ist_time() -> time:
+    """Fetch accurate current time from timeapi.io and return as timezone-aware IST time."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                _TIME_API_URL, 
+                params={"timeZone": _IST_TIMEZONE},
+                timeout=10.0
+            )
+            response.raise_for_status()
+            data = response.json()
+            dt = datetime.fromisoformat(data["dateTime"])
+            ist_tz = timezone(timedelta(hours=5, minutes=30))
+            return dt.replace(tzinfo=ist_tz).timetz()
+    except Exception:
+        # Fallback to local system time if API fails
+        ist_tz = timezone(timedelta(hours=5, minutes=30))
+        return datetime.now(ist_tz).timetz()
 
 def _compute_hours(check_in: time | None, check_out: time | None) -> tuple[float | None, float | None]:
     """Derive work_hours and extra_hours from check_in/check_out times."""
@@ -73,12 +95,12 @@ async def check_in(db: AsyncSession, employee_id: uuid.UUID) -> AttendanceOut:
         record = Attendance(
             employee_id=employee_id,
             date=today,
-            check_in=datetime.now(timezone.utc).time(),
+            check_in=await _get_current_ist_time(),
             status=AttendanceStatus.PRESENT,
         )
         db.add(record)
     elif record.check_in is None:
-        record.check_in = datetime.now(timezone.utc).time()
+        record.check_in = await _get_current_ist_time()
         record.status = AttendanceStatus.PRESENT
 
     await db.flush()
@@ -104,7 +126,7 @@ async def check_out(db: AsyncSession, employee_id: uuid.UUID) -> AttendanceOut:
             detail="You must check in before checking out",
         )
 
-    record.check_out = datetime.now(timezone.utc).time()
+    record.check_out = await _get_current_ist_time()
     await db.flush()
     await db.refresh(record)
     return _attendance_to_out(record)
