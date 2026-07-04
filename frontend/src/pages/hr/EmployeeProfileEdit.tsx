@@ -2,7 +2,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
 import { hrProfileEditSchema, type HrProfileEditFormData } from "@/schemas";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,10 @@ export default function EmployeeProfileEdit() {
 
   return (
     <div>
-      <Topbar title="Edit Employee" subtitle="Update employee information" role="hr" onLogout={() => {}} />
+            <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Edit Employee</h1>
+        <p className="text-muted-foreground mt-1">Update employee information</p>
+      </div>
 
       <div className="p-6">
         <Button variant="ghost" onClick={() => navigate(`/hr/employees/${id}`)} className="mb-4">

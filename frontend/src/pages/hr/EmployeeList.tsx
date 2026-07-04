@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, Filter } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,7 +47,10 @@ export default function EmployeeList() {
 
   return (
     <div>
-      <Topbar title="Employees" subtitle="Manage all employee records" role="hr" onLogout={() => {}} />
+            <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Employees</h1>
+        <p className="text-muted-foreground mt-1">Manage all employee records</p>
+      </div>
 
       <div className="p-6 space-y-6">
         {/* Filters */}

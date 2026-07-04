@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { Edit, Mail, Phone, MapPin, Briefcase, Calendar, FileText, Building2 } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -51,7 +50,9 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
 export default function ProfileView() {
   return (
     <div>
-      <Topbar title="My Profile" role="employee" onLogout={() => {}} />
+            <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">My Profile</h1>
+      </div>
 
       <div className="p-6 space-y-6">
         {/* Profile Header */}

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, CalendarDays } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { leaveApplicationSchema, type LeaveApplicationFormData } from "@/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,7 +103,10 @@ export default function LeaveRequests() {
 
   return (
     <div>
-      <Topbar title="Leave Requests" subtitle="Apply for leave and track status" role="employee" onLogout={() => {}} />
+            <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Leave Requests</h1>
+        <p className="text-muted-foreground mt-1">Apply for leave and track status</p>
+      </div>
 
       <div className="p-6 space-y-6">
         {/* Leave Balance */}

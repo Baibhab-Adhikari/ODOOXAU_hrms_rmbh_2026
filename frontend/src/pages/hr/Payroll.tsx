@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit, DollarSign } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
 import { salaryEditSchema } from "@/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -91,7 +90,10 @@ export default function Payroll() {
 
   return (
     <div>
-      <Topbar title="Payroll" subtitle="Manage employee compensation" role="hr" onLogout={() => {}} />
+            <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Payroll</h1>
+        <p className="text-muted-foreground mt-1">Manage employee compensation</p>
+      </div>
 
       <div className="p-6 space-y-6">
         {/* Summary Stats */}

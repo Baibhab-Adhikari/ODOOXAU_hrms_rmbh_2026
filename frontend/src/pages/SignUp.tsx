@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
-import { Building2, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Building2, CheckCircle2, Eye, EyeOff, Mail, Lock, User as UserIcon } from "lucide-react";
 import { signUpSchema, type SignUpFormData } from "@/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -36,21 +36,21 @@ export default function SignUp() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8 text-center">
-            <div className="mx-auto mb-6 h-16 w-16 rounded-full bg-success-container flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-success" />
+      <div className="min-h-screen bg-background bg-dotted flex flex-col items-center justify-center p-4">
+        <Card className="w-full max-w-[400px] border-t-4 border-t-primary shadow-lg border-x-border border-b-border">
+          <CardContent className="pt-8 pb-8 text-center flex flex-col items-center">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+              <CheckCircle2 className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="text-headline-md text-on-surface mb-2">
-              Verification Email Sent!
+            <h2 className="text-xl font-bold text-foreground mb-2">
+              Verification Sent
             </h2>
-            <p className="text-body-md text-on-surface-variant mb-6">
+            <p className="text-sm text-muted-foreground mb-8 px-4">
               We've sent a verification link to your email address. Please check
-              your inbox and click the link to activate your account.
+              your inbox to activate your account.
             </p>
-            <Link to="/signin">
-              <Button className="w-full">Go to Sign In</Button>
+            <Link to="/signin" className="w-full">
+              <Button className="w-full h-10 font-medium">Return to Sign In</Button>
             </Link>
           </CardContent>
         </Card>
@@ -59,104 +59,112 @@ export default function SignUp() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-14 w-14 rounded-xl bg-primary-container mb-4">
-            <Building2 className="h-7 w-7 text-on-primary" />
+    <div className="min-h-screen bg-background bg-dotted flex flex-col items-center justify-center p-4 py-12">
+      <div className="w-full max-w-[400px]">
+        {/* Brand Header */}
+        <div className="text-center mb-8 flex flex-col items-center">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-primary mb-5 shadow-sm">
+            <Building2 className="h-6 w-6 text-primary-foreground" />
           </div>
-          <h1 className="text-headline-lg text-on-surface">Create Account</h1>
-          <p className="text-body-md text-on-surface-variant mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Create Account</h1>
+          <p className="text-sm text-muted-foreground mt-2">
             Join the HRMS platform to manage your work life
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign Up</CardTitle>
-            <CardDescription>Enter your details to create a new account</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <Card className="border-t-4 border-t-primary shadow-lg border-x-border border-b-border">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Employee ID */}
-              <div className="space-y-2">
-                <Label htmlFor="employeeId">Employee ID</Label>
-                <Input
-                  id="employeeId"
-                  placeholder="e.g. EMP-001"
-                  {...register("employeeId")}
-                />
+              <div className="space-y-1.5">
+                <Label htmlFor="employeeId" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Employee ID</Label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="employeeId"
+                    placeholder="e.g. EMP-001"
+                    className="pl-9 h-10"
+                    {...register("employeeId")}
+                  />
+                </div>
                 {errors.employeeId && (
-                  <p className="text-caption text-error">{errors.employeeId.message}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.employeeId.message}</p>
                 )}
               </div>
 
               {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@company.com"
-                  {...register("email")}
-                />
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email Address</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    className="pl-9 h-10"
+                    {...register("email")}
+                  />
+                </div>
                 {errors.email && (
-                  <p className="text-caption text-error">{errors.email.message}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
                 )}
               </div>
 
               {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Password</Label>
                 <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Min 8 chars, uppercase, number, symbol"
+                    placeholder="Min 8 chars, mixed case"
+                    className="pl-9 pr-9 h-10"
                     {...register("password")}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-caption text-error">{errors.password.message}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.password.message}</p>
                 )}
               </div>
 
               {/* Confirm Password */}
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Confirm Password</Label>
                 <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="confirmPassword"
                     type={showConfirm ? "text" : "password"}
-                    placeholder="Re-enter your password"
+                    placeholder="Re-enter password"
+                    className="pl-9 pr-9 h-10"
                     {...register("confirmPassword")}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   >
                     {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="text-caption text-error">{errors.confirmPassword.message}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.confirmPassword.message}</p>
                 )}
               </div>
 
               {/* Role */}
-              <div className="space-y-2">
-                <Label>Role</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</Label>
                 <Select onValueChange={(val) => setValue("role", val as "employee" | "hr")}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -165,23 +173,31 @@ export default function SignUp() {
                   </SelectContent>
                 </Select>
                 {errors.role && (
-                  <p className="text-caption text-error">{errors.role.message}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.role.message}</p>
                 )}
               </div>
 
-              <Button type="submit" className="w-full mt-6">
+              <Button type="submit" className="w-full h-10 text-base font-medium mt-2">
                 Create Account
               </Button>
             </form>
 
-            <p className="text-center text-body-md text-on-surface-variant mt-6">
-              Already have an account?{" "}
-              <Link to="/signin" className="text-primary font-medium hover:underline">
-                Sign In
-              </Link>
-            </p>
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-center text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link to="/signin" className="text-primary font-semibold hover:underline">
+                  Sign In
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Footer Links */}
+        <div className="flex items-center justify-center gap-6 mt-8">
+          <Link to="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link>
+          <Link to="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Terms of Service</Link>
+        </div>
       </div>
     </div>
   );
