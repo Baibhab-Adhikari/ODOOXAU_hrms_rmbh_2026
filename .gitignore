@@ -119,3 +119,5 @@ postgres-data/
 *.swp
 *.swo
 *~
+
+uploads/
