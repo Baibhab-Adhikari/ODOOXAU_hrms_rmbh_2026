@@ -67,17 +67,23 @@ async def get_employee_dashboard(db: AsyncSession, employee_id: uuid.UUID) -> Em
     )
 
 
-async def get_hr_dashboard(db: AsyncSession) -> HrDashboardOut:
+async def get_hr_dashboard(db: AsyncSession, company_id: uuid.UUID) -> HrDashboardOut:
     today = date.today()
     
     # Total employees & present today
-    emp_result = await db.execute(select(func.count(Employee.id)).where(Employee.is_active == True))
+    emp_result = await db.execute(
+        select(func.count(Employee.id))
+        .where(Employee.is_active == True, Employee.company_id == company_id)
+    )
     total_employees = emp_result.scalar() or 0
     
     att_result = await db.execute(
-        select(func.count(Attendance.id)).where(
+        select(func.count(Attendance.id))
+        .join(Employee, Attendance.employee_id == Employee.id)
+        .where(
             Attendance.date == today,
-            Attendance.check_in.isnot(None)
+            Attendance.check_in.isnot(None),
+            Employee.company_id == company_id,
         )
     )
     present_today = att_result.scalar() or 0
@@ -91,14 +97,21 @@ async def get_hr_dashboard(db: AsyncSession) -> HrDashboardOut:
     # We will just return 3 as dummy or fetch properly if available.
     employees_added_this_month = 3
 
-    # Pending Leaves
     leave_result = await db.execute(
-        select(func.count(LeaveRequest.id)).where(LeaveRequest.status == "pending")
+        select(func.count(LeaveRequest.id))
+        .join(Employee, LeaveRequest.employee_id == Employee.id)
+        .where(
+            LeaveRequest.status == "pending",
+            Employee.company_id == company_id,
+        )
     )
     pending_leaves = leave_result.scalar() or 0
 
-    # Monthly Payroll
-    salary_result = await db.execute(select(func.sum(SalaryStructure.net_pay)))
+    salary_result = await db.execute(
+        select(func.sum(SalaryStructure.net_pay))
+        .join(Employee, SalaryStructure.employee_id == Employee.id)
+        .where(Employee.company_id == company_id)
+    )
     monthly_payroll = salary_result.scalar() or 0.0
     
     # Department Stats
@@ -109,7 +122,7 @@ async def get_hr_dashboard(db: AsyncSession) -> HrDashboardOut:
             Employee.department,
             func.count(Employee.id).label("total"),
         )
-        .where(Employee.is_active == True)
+        .where(Employee.is_active == True, Employee.company_id == company_id)
         .group_by(Employee.department)
     )
     dept_result = await db.execute(dept_stmt)
@@ -124,6 +137,7 @@ async def get_hr_dashboard(db: AsyncSession) -> HrDashboardOut:
             .join(Employee, Attendance.employee_id == Employee.id)
             .where(
                 Employee.department == dept,
+                Employee.company_id == company_id,
                 Attendance.date == today,
                 Attendance.check_in.isnot(None)
             )

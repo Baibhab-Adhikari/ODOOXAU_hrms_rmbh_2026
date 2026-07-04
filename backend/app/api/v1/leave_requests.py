@@ -48,7 +48,7 @@ async def get_all_leave_requests(
 ) -> list[LeaveRequestOut]:
     """HR/Admin: all leave requests with filters."""
     return await leave_service.get_all_leave_requests(
-        db, status, employee_id, leave_type, start_date, end_date, limit, offset
+        db, hr.company_id, status, employee_id, leave_type, start_date, end_date, limit, offset
     )
 
 
@@ -61,7 +61,7 @@ async def approve_leave_request(
 ) -> LeaveRequestOut:
     """HR/Admin: approve a pending leave request (atomically updates balance)."""
     return await leave_service.approve_leave_request(
-        db, request_id, hr.id, data.admin_comment
+        db, request_id, hr.id, hr.company_id, data.admin_comment
     )
 
 
@@ -74,5 +74,5 @@ async def reject_leave_request(
 ) -> LeaveRequestOut:
     """HR/Admin: reject a pending leave request."""
     return await leave_service.reject_leave_request(
-        db, request_id, hr.id, data.admin_comment
+        db, request_id, hr.id, hr.company_id, data.admin_comment
     )

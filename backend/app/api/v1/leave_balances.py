@@ -61,7 +61,11 @@ async def get_all_leave_balances(
 
     result = await db.execute(
         select(LeaveBalance)
-        .where(LeaveBalance.year == year)
+        .join(Employee, LeaveBalance.employee_id == Employee.id)
+        .where(
+            LeaveBalance.year == year,
+            Employee.company_id == hr.company_id
+        )
         .limit(limit)
         .offset(offset)
     )
@@ -77,7 +81,12 @@ async def update_leave_balance(
 ) -> LeaveBalanceOut:
     """HR/Admin: adjust allocated_days for one employee/type/year."""
     result = await db.execute(
-        select(LeaveBalance).where(LeaveBalance.id == balance_id)
+        select(LeaveBalance)
+        .join(Employee, LeaveBalance.employee_id == Employee.id)
+        .where(
+            LeaveBalance.id == balance_id,
+            Employee.company_id == hr.company_id
+        )
     )
     balance = result.scalar_one_or_none()
     if balance is None:

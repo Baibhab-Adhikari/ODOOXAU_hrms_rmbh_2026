@@ -27,7 +27,7 @@ async def get_all_salary_structures(
     hr: HROfficer = Depends(require_hr_or_admin),
 ) -> list[SalaryStructureListOut]:
     """HR/Admin: list all employee salary structures."""
-    return await salary_service.get_all_salary_structures(db, limit=limit, offset=offset)
+    return await salary_service.get_all_salary_structures(db, hr.company_id, limit=limit, offset=offset)
 
 
 @router.get("/me", response_model=SalaryStructureOut)
@@ -57,7 +57,7 @@ async def create_salary_structure(
 ) -> SalaryStructureOut:
     """HR/Admin: create a salary structure (runs computation service)."""
     return await salary_service.create_salary_structure(
-        db, data.employee_id, hr.id, data.components, data.effective_from
+        db, data.employee_id, hr.id, hr.company_id, data.components, data.effective_from
     )
 
 
@@ -70,5 +70,5 @@ async def update_salary_structure(
 ) -> SalaryStructureOut:
     """HR/Admin: update a salary structure (re-runs computation)."""
     return await salary_service.update_salary_structure(
-        db, salary_id, hr.id, data.components, data.effective_from
+        db, salary_id, hr.id, hr.company_id, data.components, data.effective_from
     )

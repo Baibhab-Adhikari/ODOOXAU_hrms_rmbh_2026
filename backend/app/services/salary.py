@@ -84,13 +84,18 @@ async def create_salary_structure(
     db: AsyncSession,
     employee_id: uuid.UUID,
     updater_id: uuid.UUID,
+    company_id: uuid.UUID,
     components: SalaryComponentInput,
     effective_from: date,
 ) -> SalaryStructureOut:
     """Create a salary structure for an employee (one per employee)."""
-    # Check if one already exists
     result = await db.execute(
-        select(SalaryStructure).where(SalaryStructure.employee_id == employee_id)
+        select(SalaryStructure)
+        .join(Employee, SalaryStructure.employee_id == Employee.id)
+        .where(
+            SalaryStructure.employee_id == employee_id,
+            Employee.company_id == company_id
+        )
     )
     if result.scalar_one_or_none():
         raise HTTPException(
@@ -115,12 +120,18 @@ async def update_salary_structure(
     db: AsyncSession,
     salary_id: uuid.UUID,
     updater_id: uuid.UUID,
+    company_id: uuid.UUID,
     components: SalaryComponentInput | None = None,
     effective_from: date | None = None,
 ) -> SalaryStructureOut:
     """Update an existing salary structure."""
     result = await db.execute(
-        select(SalaryStructure).where(SalaryStructure.id == salary_id)
+        select(SalaryStructure)
+        .join(Employee, SalaryStructure.employee_id == Employee.id)
+        .where(
+            SalaryStructure.id == salary_id,
+            Employee.company_id == company_id
+        )
     )
     salary = result.scalar_one_or_none()
     if salary is None:
@@ -165,6 +176,7 @@ async def get_salary_by_employee(
 
 async def get_all_salary_structures(
     db: AsyncSession,
+    company_id: uuid.UUID,
     limit: int = 50,
     offset: int = 0,
 ) -> list[SalaryStructureListOut]:
@@ -172,6 +184,7 @@ async def get_all_salary_structures(
     stmt = (
         select(SalaryStructure, Employee.full_name, Employee.job_title)
         .join(Employee, SalaryStructure.employee_id == Employee.id)
+        .where(Employee.company_id == company_id)
         .order_by(Employee.full_name)
         .limit(limit)
         .offset(offset)

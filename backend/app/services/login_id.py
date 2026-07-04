@@ -13,7 +13,7 @@ Example: OIJODO20220001
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+import uuid
 from app.models.employee import Employee
 
 
@@ -39,9 +39,10 @@ async def generate_login_id(
     db: AsyncSession,
     full_name: str,
     join_year: int,
+    company_id: uuid.UUID,
+    prefix: str,
 ) -> str:
-    """Generate a unique login ID for a new employee."""
-    prefix = settings.COMPANY_LOGIN_PREFIX
+    """Generate a unique login ID for a new employee within a company."""
     name_code = _extract_name_code(full_name)
     year_str = str(join_year)
 
@@ -50,6 +51,7 @@ async def generate_login_id(
     stmt = (
         select(func.count())
         .select_from(Employee)
+        .where(Employee.company_id == company_id)
         .where(Employee.employee_code.like(pattern))
     )
     result = await db.execute(stmt)

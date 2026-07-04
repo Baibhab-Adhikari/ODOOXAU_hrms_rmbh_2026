@@ -21,6 +21,7 @@ from app.core.deps import (
     require_hr_or_admin,
 )
 from app.core.security import generate_temp_password, hash_password
+from app.models.company import Company
 from app.models.employee import Employee
 from app.models.hr_officer import HROfficer
 from app.models.leave_balance import LeaveBalance
@@ -48,7 +49,9 @@ async def create_employee(
     """HR/Admin: create a new employee with auto-generated login ID and temp password."""
     # Check email uniqueness
     existing = await db.execute(
-        select(Employee).where(Employee.email == data.email)
+        select(Employee)
+        .where(Employee.email == data.email)
+        .where(Employee.company_id == hr.company_id)
     )
     if existing.scalar_one_or_none():
         raise HTTPException(
@@ -58,9 +61,15 @@ async def create_employee(
 
     temp_password = generate_temp_password()
     join_year = data.date_of_joining.year
-    login_id = await generate_login_id(db, data.full_name, join_year)
+    company_result = await db.execute(select(Company).where(Company.id == hr.company_id))
+    company = company_result.scalar_one()
+
+    login_id = await generate_login_id(
+        db, data.full_name, join_year, hr.company_id, company.login_prefix
+    )
 
     employee = Employee(
+        company_id=hr.company_id,
         employee_code=login_id,
         email=data.email,
         password_hash=hash_password(temp_password),
@@ -112,7 +121,11 @@ async def list_employees(
     offset: int = 0,
 ) -> list[EmployeeOut]:
     """HR/Admin: list employees with search/filter and today_status."""
-    stmt = select(Employee).where(Employee.is_active == True)  # noqa: E712
+    stmt = (
+        select(Employee)
+        .where(Employee.is_active == True)  # noqa: E712
+        .where(Employee.company_id == hr.company_id)
+    )
 
     if search:
         stmt = stmt.where(Employee.full_name.ilike(f"%{search}%"))
@@ -145,7 +158,9 @@ async def get_employee(
     check_self_or_hr(actor, actor_type, employee_id)
 
     result = await db.execute(
-        select(Employee).where(Employee.id == employee_id)
+        select(Employee)
+        .where(Employee.id == employee_id)
+        .where(Employee.company_id == actor.company_id)
     )
     employee = result.scalar_one_or_none()
     if employee is None:
@@ -171,7 +186,9 @@ async def update_employee(
     check_self_or_hr(actor, actor_type, employee_id)
 
     result = await db.execute(
-        select(Employee).where(Employee.id == employee_id)
+        select(Employee)
+        .where(Employee.id == employee_id)
+        .where(Employee.company_id == actor.company_id)
     )
     employee = result.scalar_one_or_none()
     if employee is None:
@@ -210,7 +227,9 @@ async def deactivate_employee(
 ) -> EmployeeOut:
     """Admin only: soft-delete by setting is_active = false."""
     result = await db.execute(
-        select(Employee).where(Employee.id == employee_id)
+        select(Employee)
+        .where(Employee.id == employee_id)
+        .where(Employee.company_id == admin.company_id)
     )
     employee = result.scalar_one_or_none()
     if employee is None:

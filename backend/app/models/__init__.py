@@ -1,7 +1,7 @@
 # app/models/__init__.py
 """Re-export all models for convenient imports."""
 
-from app.models.company_settings import CompanySettings
+from app.models.company import Company
 from app.models.hr_officer import HROfficer
 from app.models.employee import Employee
 from app.models.attendance import Attendance
@@ -11,7 +11,7 @@ from app.models.salary_structure import SalaryStructure
 from app.models.document import Document
 
 __all__ = [
-    "CompanySettings",
+    "Company",
     "HROfficer",
     "Employee",
     "Attendance",

@@ -61,9 +61,9 @@ app.include_router(salary_router)
 app.include_router(documents_router)
 app.include_router(dashboard_router)
 
-# Ensure upload dir exists
-os.makedirs("/app/uploads", exist_ok=True)
-app.mount("/static/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/static/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 @app.get("/", tags=["Health"])

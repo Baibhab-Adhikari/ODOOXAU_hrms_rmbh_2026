@@ -13,7 +13,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.models.company_settings import CompanySettings
+from app.models.company import Company
 from app.models.employee import Employee
 from app.models.hr_officer import HROfficer
 from app.schemas.auth import (
@@ -40,25 +40,22 @@ async def signup(db: AsyncSession, data: SignupRequest) -> TokenResponse:
             detail="An HR officer with this email already exists",
         )
 
-    # Create or update company settings
-    result = await db.execute(select(CompanySettings).limit(1))
-    company = result.scalar_one_or_none()
-    if company is None:
-        company = CompanySettings(
-            company_name=data.company_name,
-            logo_url=data.logo_url,
-        )
-        db.add(company)
-    else:
-        company.company_name = data.company_name
-        if data.logo_url is not None:
-            company.logo_url = data.logo_url
+    # Create a new company
+    login_prefix = data.company_name[:2].upper().ljust(2, "X")
+    company = Company(
+        company_name=data.company_name,
+        login_prefix=login_prefix,
+        logo_url=data.logo_url,
+    )
+    db.add(company)
+    await db.flush()  # To get company.id
 
     officer = HROfficer(
         email=data.email,
         password_hash=hash_password(data.password),
         full_name=data.full_name,
         phone=data.phone,
+        company_id=company.id,
         email_verified=True,
     )
     db.add(officer)

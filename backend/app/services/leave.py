@@ -6,6 +6,7 @@ from datetime import date
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
+from app.models.employee import Employee
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import LeaveStatus, LeaveType
@@ -87,11 +88,17 @@ async def approve_leave_request(
     db: AsyncSession,
     request_id: uuid.UUID,
     reviewer_id: uuid.UUID,
+    company_id: uuid.UUID,
     admin_comment: str | None = None,
 ) -> LeaveRequestOut:
     """Approve a leave request and atomically increment used_days."""
     result = await db.execute(
-        select(LeaveRequest).where(LeaveRequest.id == request_id)
+        select(LeaveRequest)
+        .join(Employee, LeaveRequest.employee_id == Employee.id)
+        .where(
+            LeaveRequest.id == request_id,
+            Employee.company_id == company_id
+        )
     )
     leave_req = result.scalar_one_or_none()
     if leave_req is None:
@@ -144,11 +151,17 @@ async def reject_leave_request(
     db: AsyncSession,
     request_id: uuid.UUID,
     reviewer_id: uuid.UUID,
+    company_id: uuid.UUID,
     admin_comment: str | None = None,
 ) -> LeaveRequestOut:
     """Reject a leave request — no balance change."""
     result = await db.execute(
-        select(LeaveRequest).where(LeaveRequest.id == request_id)
+        select(LeaveRequest)
+        .join(Employee, LeaveRequest.employee_id == Employee.id)
+        .where(
+            LeaveRequest.id == request_id,
+            Employee.company_id == company_id
+        )
     )
     leave_req = result.scalar_one_or_none()
     if leave_req is None:
@@ -186,6 +199,7 @@ async def get_employee_leave_requests(
 
 async def get_all_leave_requests(
     db: AsyncSession,
+    company_id: uuid.UUID,
     status_filter: str | None = None,
     employee_id: uuid.UUID | None = None,
     leave_type: str | None = None,
@@ -195,7 +209,11 @@ async def get_all_leave_requests(
     offset: int = 0,
 ) -> list[LeaveRequestOut]:
     """Get all leave requests with optional filters (HR view)."""
-    stmt = select(LeaveRequest)
+    stmt = (
+        select(LeaveRequest)
+        .join(Employee, LeaveRequest.employee_id == Employee.id)
+        .where(Employee.company_id == company_id)
+    )
 
     if status_filter:
         stmt = stmt.where(LeaveRequest.status == status_filter)

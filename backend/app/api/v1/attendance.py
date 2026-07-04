@@ -57,7 +57,7 @@ async def get_all_attendance(
 ) -> list[AttendanceListOut]:
     """HR/Admin: all employees' attendance for a given date (default today)."""
     return await attendance_service.get_all_attendance(
-        db, target_date, search, limit, offset
+        db, hr.company_id, target_date, search, limit, offset
     )
 
 

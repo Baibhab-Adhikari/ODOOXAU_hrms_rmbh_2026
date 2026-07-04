@@ -8,7 +8,7 @@ from sqlalchemy import select
 import os
 import shutil
 
-UPLOAD_DIR = "/app/uploads"
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 from app.core.constants import ActorType
@@ -53,6 +53,16 @@ async def create_document(
             detail="Employees can only upload documents for themselves",
         )
 
+    # If HR/Admin is uploading for an employee, ensure they belong to the same company
+    if actor_type == ActorType.HR_OFFICER:
+        emp_result = await db.execute(select(Employee).where(Employee.id == data.employee_id))
+        emp = emp_result.scalar_one_or_none()
+        if emp is None or emp.company_id != actor.company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Employee does not belong to your company",
+            )
+
     document = Document(
         employee_id=data.employee_id,
         doc_type=data.doc_type,
@@ -87,7 +97,11 @@ async def get_employee_documents(
     """HR/Admin: view any employee's documents."""
     result = await db.execute(
         select(Document)
-        .where(Document.employee_id == employee_id)
+        .join(Employee, Document.employee_id == Employee.id)
+        .where(
+            Document.employee_id == employee_id,
+            Employee.company_id == hr.company_id
+        )
         .order_by(Document.uploaded_at.desc())
     )
     return [DocumentOut.model_validate(d) for d in result.scalars().all()]
@@ -112,12 +126,22 @@ async def delete_document(
             detail="Document not found",
         )
 
-    # Employees can only delete their own; HR officers can delete any
+    # Employees can only delete their own
     if actor_type == ActorType.EMPLOYEE and document.employee_id != actor.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only delete your own documents",
         )
+        
+    # HR officers can only delete if the employee belongs to their company
+    if actor_type == ActorType.HR_OFFICER:
+        emp_result = await db.execute(select(Employee).where(Employee.id == document.employee_id))
+        emp = emp_result.scalar_one()
+        if emp.company_id != actor.company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Document belongs to an employee from a different company",
+            )
 
     await db.delete(document)
     await db.flush()

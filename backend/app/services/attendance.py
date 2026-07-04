@@ -159,6 +159,7 @@ async def get_employee_attendance(
 
 async def get_all_attendance(
     db: AsyncSession,
+    company_id: uuid.UUID,
     target_date: date | None = None,
     search: str | None = None,
     limit: int = 50,
@@ -174,6 +175,7 @@ async def get_all_attendance(
         select(Attendance, Employee.full_name)
         .join(Employee, Attendance.employee_id == Employee.id)
         .where(Attendance.date == target_date)
+        .where(Employee.company_id == company_id)
     )
 
     if search:

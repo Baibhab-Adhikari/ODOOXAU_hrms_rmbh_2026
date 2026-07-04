@@ -27,4 +27,4 @@ async def get_hr_dashboard(
     hr: HROfficer = Depends(require_hr_or_admin),
 ) -> HrDashboardOut:
     """HR/Admin: View company-wide dashboard stats."""
-    return await dashboard_service.get_hr_dashboard(db)
+    return await dashboard_service.get_hr_dashboard(db, hr.company_id)

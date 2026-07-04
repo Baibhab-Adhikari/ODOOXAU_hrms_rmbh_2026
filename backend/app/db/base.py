@@ -8,7 +8,7 @@ base_class.py directly to avoid circular imports.
 from app.db.base_class import Base  # noqa: F401
 
 # Import all models here so Base.metadata is fully populated.
-from app.models.company_settings import CompanySettings  # noqa: F401
+from app.models.company import Company  # noqa: F401
 from app.models.hr_officer import HROfficer  # noqa: F401
 from app.models.employee import Employee  # noqa: F401
 from app.models.attendance import Attendance  # noqa: F401

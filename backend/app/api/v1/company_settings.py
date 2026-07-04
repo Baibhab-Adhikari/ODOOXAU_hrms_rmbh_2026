@@ -5,34 +5,37 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
 from app.core.deps import DbSession, require_hr_or_admin
-from app.models.company_settings import CompanySettings
+from app.models.company import Company
 from app.models.hr_officer import HROfficer
-from app.schemas.company import CompanySettingsOut, CompanySettingsUpdate
+from app.schemas.company import CompanyOut, CompanyUpdate
 
 router = APIRouter(prefix="/company-settings", tags=["Company Settings"])
 
 
-@router.get("", response_model=CompanySettingsOut)
-async def get_company_settings(db: DbSession) -> CompanySettingsOut:
-    """Public: get company name + logo for sign-in page branding."""
-    result = await db.execute(select(CompanySettings).limit(1))
+@router.get("", response_model=CompanyOut)
+async def get_company_settings(
+    db: DbSession,
+    hr: HROfficer = Depends(require_hr_or_admin),
+) -> CompanyOut:
+    """HR/Admin: get company name + logo for settings page."""
+    result = await db.execute(select(Company).where(Company.id == hr.company_id))
     company = result.scalar_one_or_none()
     if company is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Company settings not found. Please sign up first.",
         )
-    return CompanySettingsOut.model_validate(company)
+    return CompanyOut.model_validate(company)
 
 
-@router.patch("", response_model=CompanySettingsOut)
+@router.patch("", response_model=CompanyOut)
 async def update_company_settings(
-    data: CompanySettingsUpdate,
+    data: CompanyUpdate,
     db: DbSession,
     admin: HROfficer = Depends(require_hr_or_admin),
-) -> CompanySettingsOut:
+) -> CompanyOut:
     """Admin only: update company name/logo."""
-    result = await db.execute(select(CompanySettings).limit(1))
+    result = await db.execute(select(Company).where(Company.id == admin.company_id))
     company = result.scalar_one_or_none()
     if company is None:
         raise HTTPException(
@@ -46,4 +49,4 @@ async def update_company_settings(
 
     await db.flush()
     await db.refresh(company)
-    return CompanySettingsOut.model_validate(company)
+    return CompanyOut.model_validate(company)
