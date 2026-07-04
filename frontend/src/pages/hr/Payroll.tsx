@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit, DollarSign } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
-import { salaryEditSchema, type SalaryEditFormData } from "@/schemas";
+import { salaryEditSchema } from "@/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +52,7 @@ export default function Payroll() {
     reset,
     watch,
     formState: { errors },
-  } = useForm<SalaryEditFormData>({
+  } = useForm({
     resolver: zodResolver(salaryEditSchema),
   });
 
@@ -74,7 +74,7 @@ export default function Payroll() {
     }
   };
 
-  const onSubmit = (data: SalaryEditFormData) => {
+  const onSubmit = (data: any) => {
     const netPay = data.basicPay + data.allowances - data.deductions;
     setPayroll((prev) =>
       prev.map((p) =>
