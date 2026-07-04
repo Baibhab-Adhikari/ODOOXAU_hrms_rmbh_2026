@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, DollarSign } from "lucide-react";
-import { salaryEditSchema } from "@/schemas";
+import { Edit, DollarSign, Loader2, AlertCircle } from "lucide-react";
+import { salaryEditSchema, type SalaryEditFormData } from "@/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import {
   Dialog,
@@ -18,29 +18,29 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { StatCard } from "@/components/StatCard";
-import type { SalaryStructure } from "@/types";
+import api from "@/lib/axios";
 
-interface PayrollEntry extends SalaryStructure {
+interface PayrollEntry {
   employeeId: string;
   employeeName: string;
   department: string;
+  jobTitle: string;
+  profilePicUrl?: string;
+  salaryId?: string;
+  basicPay: number;
+  allowances: number;
+  deductions: number;
+  netPay: number;
+  effectiveFrom?: string;
+  wage: number; // Stored wage
 }
 
-const initialPayroll: PayrollEntry[] = [
-  { employeeId: "emp-001", employeeName: "Rahul Sharma", department: "Engineering", basicPay: 65000, allowances: 22000, deductions: 8500, netPay: 78500, effectiveFrom: "2026-01-01" },
-  { employeeId: "emp-002", employeeName: "Anita Patel", department: "Design", basicPay: 55000, allowances: 18000, deductions: 7200, netPay: 65800, effectiveFrom: "2026-01-01" },
-  { employeeId: "emp-003", employeeName: "Vikram Singh", department: "Marketing", basicPay: 72000, allowances: 25000, deductions: 9800, netPay: 87200, effectiveFrom: "2026-01-01" },
-  { employeeId: "emp-004", employeeName: "Sneha Reddy", department: "Engineering", basicPay: 48000, allowances: 15000, deductions: 6200, netPay: 56800, effectiveFrom: "2026-04-01" },
-  { employeeId: "emp-005", employeeName: "Arjun Mehta", department: "Engineering", basicPay: 58000, allowances: 19000, deductions: 7500, netPay: 69500, effectiveFrom: "2026-01-01" },
-  { employeeId: "emp-006", employeeName: "Kavita Nair", department: "Finance", basicPay: 52000, allowances: 17000, deductions: 6800, netPay: 62200, effectiveFrom: "2026-01-01" },
-  { employeeId: "emp-007", employeeName: "Rohan Das", department: "Sales", basicPay: 45000, allowances: 20000, deductions: 6000, netPay: 59000, effectiveFrom: "2026-01-01" },
-  { employeeId: "emp-008", employeeName: "Neha Gupta", department: "HR", basicPay: 42000, allowances: 14000, deductions: 5500, netPay: 50500, effectiveFrom: "2026-07-01" },
-  { employeeId: "emp-009", employeeName: "Amit Joshi", department: "Engineering", basicPay: 62000, allowances: 21000, deductions: 8200, netPay: 74800, effectiveFrom: "2026-01-01" },
-  { employeeId: "emp-010", employeeName: "Priya Kapoor", department: "Marketing", basicPay: 46000, allowances: 15500, deductions: 6100, netPay: 55400, effectiveFrom: "2026-08-01" },
-];
-
 export default function Payroll() {
-  const [payroll, setPayroll] = useState(initialPayroll);
+  const [payroll, setPayroll] = useState<PayrollEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const [editDialog, setEditDialog] = useState<{ open: boolean; employeeId: string }>({ open: false, employeeId: "" });
 
   const editingEmployee = payroll.find((p) => p.employeeId === editDialog.employeeId);
@@ -51,38 +51,96 @@ export default function Payroll() {
     reset,
     watch,
     formState: { errors },
-  } = useForm({
-    resolver: zodResolver(salaryEditSchema),
+  } = useForm<SalaryEditFormData>({
+    resolver: zodResolver(salaryEditSchema as any) as any,
   });
 
-  const basicPay = watch("basicPay");
-  const allowances = watch("allowances");
-  const deductions = watch("deductions");
-  const computedNetPay = (Number(basicPay) || 0) + (Number(allowances) || 0) - (Number(deductions) || 0);
+  const watchWage = watch("wage");
+
+  const fetchPayroll = async () => {
+    setIsLoading(true);
+    try {
+      const [empRes, salRes] = await Promise.all([
+        api.get("/employees?limit=500"),
+        api.get("/salary-structures?limit=500"),
+      ]);
+
+      const salaries = new Map();
+      salRes.data.forEach((s: any) => {
+        salaries.set(s.employee_id, s);
+      });
+
+      const merged: PayrollEntry[] = empRes.data.map((emp: any) => {
+        const sal = salaries.get(emp.id);
+        return {
+          employeeId: emp.id,
+          employeeName: emp.full_name,
+          department: emp.department || "N/A",
+          jobTitle: emp.job_title || "N/A",
+          profilePicUrl: emp.profile_picture_url,
+          salaryId: sal?.id,
+          basicPay: sal?.basic_pay || 0,
+          allowances: sal?.allowances || 0,
+          deductions: sal?.deductions || 0,
+          netPay: sal?.net_pay || 0,
+          effectiveFrom: sal?.effective_from,
+          wage: sal?.salary_components?.wage || 0,
+        };
+      });
+
+      setPayroll(merged);
+    } catch (error) {
+      console.error("Failed to load payroll", error);
+      setErrorMsg("Failed to load payroll records.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayroll();
+  }, []);
 
   const openEditDialog = (employeeId: string) => {
     const emp = payroll.find((p) => p.employeeId === employeeId);
     if (emp) {
       reset({
-        basicPay: emp.basicPay,
-        allowances: emp.allowances,
-        deductions: emp.deductions,
-        effectiveFrom: emp.effectiveFrom,
+        wage: emp.wage,
+        effectiveFrom: emp.effectiveFrom || new Date().toISOString().split("T")[0],
       });
       setEditDialog({ open: true, employeeId });
     }
   };
 
-  const onSubmit = (data: any) => {
-    const netPay = data.basicPay + data.allowances - data.deductions;
-    setPayroll((prev) =>
-      prev.map((p) =>
-        p.employeeId === editDialog.employeeId
-          ? { ...p, basicPay: data.basicPay, allowances: data.allowances, deductions: data.deductions, netPay, effectiveFrom: data.effectiveFrom }
-          : p
-      )
-    );
-    setEditDialog({ open: false, employeeId: "" });
+  const onSubmit = async (data: SalaryEditFormData) => {
+    setIsUpdating(true);
+    try {
+      const emp = payroll.find(p => p.employeeId === editDialog.employeeId);
+      if (!emp) return;
+
+      const payload = {
+        effective_from: data.effectiveFrom,
+        components: {
+          wage: data.wage
+        }
+      };
+
+      if (emp.salaryId) {
+        // Update existing
+        await api.patch(`/salary-structures/${emp.salaryId}`, payload);
+      } else {
+        // Create new
+        await api.post(`/salary-structures`, { ...payload, employee_id: emp.employeeId });
+      }
+      
+      await fetchPayroll();
+      setEditDialog({ open: false, employeeId: "" });
+    } catch (error: any) {
+      console.error("Failed to save salary", error);
+      alert(error.response?.data?.detail || "Failed to save salary structure");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const totalPayroll = payroll.reduce((acc, p) => acc + p.netPay, 0);
@@ -134,7 +192,7 @@ export default function Payroll() {
               <TableHeader>
                 <TableRow>
                   <TableHead>EMPLOYEE</TableHead>
-                  <TableHead>DEPARTMENT</TableHead>
+                  <TableHead>JOB TITLE</TableHead>
                   <TableHead className="text-right">BASIC PAY</TableHead>
                   <TableHead className="text-right">ALLOWANCES</TableHead>
                   <TableHead className="text-right">DEDUCTIONS</TableHead>
@@ -144,25 +202,43 @@ export default function Payroll() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {payroll.map((entry) => (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                    </TableCell>
+                  </TableRow>
+                ) : errorMsg ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center text-destructive">
+                      <div className="flex items-center justify-center gap-2">
+                        <AlertCircle className="h-5 w-5" />
+                        {errorMsg}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : payroll.map((entry) => (
                   <TableRow key={entry.employeeId}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                            {entry.employeeName.split(" ").map((n) => n[0]).join("")}
+                          <AvatarImage src={entry.profilePicUrl} />
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary uppercase">
+                            {entry.employeeName.substring(0, 2)}
                           </AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{entry.employeeName}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-on-surface-variant">{entry.department}</TableCell>
-                    <TableCell className="text-right">₹{entry.basicPay.toLocaleString()}</TableCell>
-                    <TableCell className="text-right text-success">+ ₹{entry.allowances.toLocaleString()}</TableCell>
-                    <TableCell className="text-right text-error">- ₹{entry.deductions.toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-semibold text-primary">₹{entry.netPay.toLocaleString()}</TableCell>
                     <TableCell className="text-on-surface-variant">
-                      {new Date(entry.effectiveFrom).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+                      <span className="truncate max-w-[150px] inline-block">{entry.jobTitle}</span>
+                    </TableCell>
+                    <TableCell className="text-right">₹{entry.basicPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    <TableCell className="text-right text-success">+ ₹{entry.allowances.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    <TableCell className="text-right text-error">- ₹{entry.deductions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">₹{entry.netPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    <TableCell className="text-on-surface-variant">
+                      {entry.effectiveFrom ? new Date(entry.effectiveFrom).toLocaleDateString("en-IN", { month: "short", year: "numeric", day: "numeric" }) : "—"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -189,47 +265,38 @@ export default function Payroll() {
             <DialogTitle>Edit Salary — {editingEmployee?.employeeName}</DialogTitle>
             <DialogDescription>Update the salary structure for this employee</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="basicPay">Basic Pay (₹)</Label>
-                <Input id="basicPay" type="number" {...register("basicPay")} />
-                {errors.basicPay && <p className="text-caption text-error">{errors.basicPay.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="allowances">Allowances (₹)</Label>
-                <Input id="allowances" type="number" {...register("allowances")} />
-                {errors.allowances && <p className="text-caption text-error">{errors.allowances.message}</p>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="deductions">Deductions (₹)</Label>
-                <Input id="deductions" type="number" {...register("deductions")} />
-                {errors.deductions && <p className="text-caption text-error">{errors.deductions.message}</p>}
+                <Label htmlFor="wage">Total Wage (₹)</Label>
+                <Input id="wage" type="number" step="0.01" {...register("wage")} />
+                <p className="text-xs text-muted-foreground">Basic pay, allowances, etc. will be computed automatically.</p>
+                {errors.wage && <p className="text-caption text-destructive">{errors.wage.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="effectiveFrom">Effective From</Label>
                 <Input id="effectiveFrom" type="date" {...register("effectiveFrom")} />
-                {errors.effectiveFrom && <p className="text-caption text-error">{errors.effectiveFrom.message}</p>}
+                {errors.effectiveFrom && <p className="text-caption text-destructive">{errors.effectiveFrom.message}</p>}
               </div>
             </div>
 
             <div className="p-4 rounded-lg bg-surface-container-low">
               <div className="flex justify-between items-center">
-                <span className="text-title-md text-on-surface">Computed Net Pay</span>
+                <span className="text-title-md text-on-surface">Target Net Pay (approx)</span>
                 <span className="text-title-lg text-primary font-bold">
-                  ₹{computedNetPay.toLocaleString()}
+                  ₹{Number(watchWage || 0).toLocaleString()}
                 </span>
               </div>
             </div>
 
             <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => setEditDialog({ ...editDialog, open: false })}>
+              <Button type="button" variant="outline" onClick={() => setEditDialog({ ...editDialog, open: false })} disabled={isUpdating}>
                 Cancel
               </Button>
-              <Button type="submit">Save Changes</Button>
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save Changes
+              </Button>
             </div>
           </form>
         </DialogContent>

@@ -19,8 +19,9 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.employee import Employee
 from app.models.salary_structure import SalaryStructure
-from app.schemas.salary_structure import SalaryComponentInput, SalaryStructureOut
+from app.schemas.salary_structure import SalaryComponentInput, SalaryStructureOut, SalaryStructureListOut
 
 
 def compute_salary_structure(components: SalaryComponentInput) -> dict:
@@ -160,3 +161,33 @@ async def get_salary_by_employee(
             detail="No salary structure found for this employee",
         )
     return SalaryStructureOut.model_validate(salary)
+
+
+async def get_all_salary_structures(
+    db: AsyncSession,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[SalaryStructureListOut]:
+    """Get all salary structures with employee name and job title."""
+    stmt = (
+        select(SalaryStructure, Employee.full_name, Employee.job_title)
+        .join(Employee, SalaryStructure.employee_id == Employee.id)
+        .order_by(Employee.full_name)
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+    
+    out_list = []
+    for row in rows:
+        salary_record = row[0]
+        employee_name = row[1]
+        job_title = row[2]
+        
+        out_dict = SalaryStructureListOut.model_validate(salary_record).model_dump()
+        out_dict["employee_name"] = employee_name
+        out_dict["job_title"] = job_title
+        out_list.append(SalaryStructureListOut(**out_dict))
+        
+    return out_list

@@ -19,6 +19,7 @@ from app.api.v1.leave_requests import router as leave_requests_router
 from app.api.v1.leave_balances import router as leave_balances_router
 from app.api.v1.salary_structures import router as salary_router
 from app.api.v1.documents import router as documents_router
+from app.api.v1.dashboard import router as dashboard_router
 
 
 @asynccontextmanager
@@ -56,6 +57,7 @@ app.include_router(leave_requests_router)
 app.include_router(leave_balances_router)
 app.include_router(salary_router)
 app.include_router(documents_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/", tags=["Health"])

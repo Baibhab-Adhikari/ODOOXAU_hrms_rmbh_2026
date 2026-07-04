@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const signUpSchema = z
   .object({
-    employeeId: z.string().min(1, "Employee ID is required"),
+    companyName: z.string().min(1, "Company Name is required"),
+    fullName: z.string().min(1, "Full Name is required"),
     email: z.string().email("Please enter a valid email address"),
     password: z
       .string()
@@ -14,9 +15,6 @@ export const signUpSchema = z
         "Password must contain at least one special character"
       ),
     confirmPassword: z.string().min(1, "Please confirm your password"),
-    role: z.enum(["employee", "hr"], {
-      message: "Please select a role",
-    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -26,11 +24,8 @@ export const signUpSchema = z
 export type SignUpFormData = z.infer<typeof signUpSchema>;
 
 export const signInSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  email: z.string().min(1, "Please enter your email or ID"),
   password: z.string().min(1, "Password is required"),
-  role: z.enum(["employee", "hr"], {
-    message: "Please select a role",
-  }),
 });
 
 export type SignInFormData = z.infer<typeof signInSchema>;
@@ -55,7 +50,6 @@ export const hrProfileEditSchema = z.object({
   address: z.string().min(5, "Address must be at least 5 characters"),
   jobTitle: z.string().min(2, "Job title is required"),
   department: z.string().min(2, "Department is required"),
-  employeeCode: z.string().min(1, "Employee code is required"),
 });
 
 export type HrProfileEditFormData = z.infer<typeof hrProfileEditSchema>;
@@ -85,15 +79,9 @@ export const leaveApplicationSchema = z
 export type LeaveApplicationFormData = z.infer<typeof leaveApplicationSchema>;
 
 export const salaryEditSchema = z.object({
-  basicPay: z.coerce
+  wage: z.coerce
     .number()
-    .min(0, "Basic pay must be a positive number"),
-  allowances: z.coerce
-    .number()
-    .min(0, "Allowances must be a positive number"),
-  deductions: z.coerce
-    .number()
-    .min(0, "Deductions must be a positive number"),
+    .min(0, "Wage must be a positive number"),
   effectiveFrom: z.string().min(1, "Effective date is required"),
 });
 

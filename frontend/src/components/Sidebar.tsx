@@ -9,6 +9,8 @@ import {
   Clock,
   HelpCircle,
   LogOut,
+  Settings,
+  FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types";
@@ -25,6 +27,7 @@ const employeeNavItems = [
   { to: "/employee/leave", icon: CalendarDays, label: "Leave Management" },
   { to: "/employee/salary", icon: DollarSign, label: "Payroll" },
   { to: "/employee/profile", icon: User, label: "Profile" },
+  { to: "/employee/documents", icon: FolderOpen, label: "Documents" },
 ];
 
 const hrNavItems = [
@@ -33,6 +36,8 @@ const hrNavItems = [
   { to: "/hr/leave-approvals", icon: CalendarDays, label: "Leave Management" },
   { to: "/hr/payroll", icon: DollarSign, label: "Payroll" },
   { to: "/hr/employees", icon: User, label: "Profile" },
+  { to: "/hr/documents", icon: FolderOpen, label: "Documents" },
+  { to: "/hr/company-settings", icon: Settings, label: "Company Settings" },
 ];
 
 export function Sidebar({ role, onLogout }: SidebarProps) {
@@ -53,10 +58,12 @@ export function Sidebar({ role, onLogout }: SidebarProps) {
       </div>
 
       <div className="px-4 py-4">
-        <Button variant="default" className="w-full bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 justify-center gap-2 shadow-sm">
-          <Clock className="h-4 w-4" />
-          Quick Clock-In
-        </Button>
+        <NavLink to={role === "employee" ? "/employee/attendance" : "/hr/attendance"}>
+          <Button variant="default" className="w-full bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 justify-center gap-2 shadow-sm">
+            <Clock className="h-4 w-4" />
+            Quick Clock-In
+          </Button>
+        </NavLink>
       </div>
 
       {/* Navigation */}

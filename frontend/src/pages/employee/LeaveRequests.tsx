@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, CalendarDays } from "lucide-react";
+import { Plus, CalendarDays, Loader2, AlertCircle } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
-import { leaveApplicationSchema, type LeaveApplicationFormData } from "@/schemas";
+import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,56 +24,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { LeaveRequest } from "@/types";
+import api from "@/lib/axios";
 
-const mockLeaveRequests: LeaveRequest[] = [
-  {
-    id: "lr-1",
-    employeeName: "Rahul Sharma",
-    leaveType: "Paid",
-    startDate: "2026-07-10",
-    endDate: "2026-07-12",
-    remarks: "Family function",
-    status: "Approved",
-    adminComment: "Approved. Enjoy!",
-    createdAt: "2026-07-01",
-  },
-  {
-    id: "lr-2",
-    employeeName: "Rahul Sharma",
-    leaveType: "Sick",
-    startDate: "2026-06-15",
-    endDate: "2026-06-15",
-    remarks: "Not feeling well",
-    status: "Approved",
-    createdAt: "2026-06-14",
-  },
-  {
-    id: "lr-3",
-    employeeName: "Rahul Sharma",
-    leaveType: "Paid",
-    startDate: "2026-07-20",
-    endDate: "2026-07-21",
-    remarks: "Personal work",
-    status: "Pending",
-    createdAt: "2026-07-02",
-  },
-  {
-    id: "lr-4",
-    employeeName: "Rahul Sharma",
-    leaveType: "Unpaid",
-    startDate: "2026-05-05",
-    endDate: "2026-05-07",
-    remarks: "Extended vacation",
-    status: "Rejected",
-    adminComment: "Too many pending tasks. Please reschedule.",
-    createdAt: "2026-04-28",
-  },
-];
+// Leave balances API structure
+type LeaveBalance = {
+  id: string;
+  leave_type: string;
+  allocated_days: number;
+  used_days: number;
+  remaining_days: number;
+};
+
+// Leave request API structure
+type LeaveRequest = {
+  id: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  remarks: string | null;
+  status: string;
+  created_at: string;
+};
+
+const leaveApplicationSchema = z.object({
+  leaveType: z.enum(["Paid", "Sick", "Unpaid"], { error_map: () => ({ message: "Please select a leave type" }) } as any),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+  remarks: z.string().optional(),
+}).refine(data => {
+  return new Date(data.startDate) <= new Date(data.endDate);
+}, {
+  message: "End date cannot be before start date",
+  path: ["endDate"]
+});
+
+type LeaveApplicationFormData = z.infer<typeof leaveApplicationSchema>;
 
 export default function LeaveRequests() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [leaves, setLeaves] = useState(mockLeaveRequests);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [balances, setBalances] = useState<LeaveBalance[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     register,
@@ -85,21 +78,60 @@ export default function LeaveRequests() {
     resolver: zodResolver(leaveApplicationSchema),
   });
 
-  const onSubmit = (data: LeaveApplicationFormData) => {
-    const newLeave: LeaveRequest = {
-      id: `lr-${leaves.length + 1}`,
-      employeeName: "Rahul Sharma",
-      leaveType: data.leaveType,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      remarks: data.remarks,
-      status: "Pending",
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-    setLeaves([newLeave, ...leaves]);
-    setDialogOpen(false);
-    reset();
+  const fetchData = async () => {
+    try {
+      const [leavesRes, balancesRes] = await Promise.all([
+        api.get("/leave-requests/me"),
+        api.get("/leave-balances/me"),
+      ]);
+      setLeaves(leavesRes.data);
+      setBalances(balancesRes.data);
+    } catch (error) {
+      console.error("Failed to load leave data", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const onSubmit = async (data: LeaveApplicationFormData) => {
+    setErrorMsg(null);
+    setIsSubmitting(true);
+    try {
+      await api.post("/leave-requests", {
+        leave_type: data.leaveType,
+        start_date: data.startDate,
+        end_date: data.endDate,
+        remarks: data.remarks || null,
+      });
+      setDialogOpen(false);
+      reset();
+      fetchData(); // Refresh the list after successful submit
+    } catch (error: any) {
+      setErrorMsg(error.response?.data?.detail || "Failed to submit leave request.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const getBalance = (type: string) => {
+    return balances.find(b => b.leave_type === type);
+  };
+
+  const paidBalance = getBalance("Paid");
+  const sickBalance = getBalance("Sick");
+  const unpaidBalance = getBalance("Unpaid");
 
   return (
     <div>
@@ -116,11 +148,11 @@ export default function LeaveRequests() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-label-md text-on-surface-variant">PAID LEAVE</p>
-                  <p className="text-headline-md text-on-surface mt-1">8</p>
-                  <p className="text-caption text-on-surface-variant">of 15 remaining</p>
+                  <p className="text-headline-md text-on-surface mt-1">{paidBalance?.remaining_days ?? 0}</p>
+                  <p className="text-caption text-on-surface-variant">of {paidBalance?.allocated_days ?? 0} remaining</p>
                 </div>
-                <div className="p-3 rounded-lg bg-success/10">
-                  <CalendarDays className="h-5 w-5 text-success" />
+                <div className="p-3 rounded-lg bg-emerald-500/10">
+                  <CalendarDays className="h-5 w-5 text-emerald-500" />
                 </div>
               </div>
             </CardContent>
@@ -130,11 +162,11 @@ export default function LeaveRequests() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-label-md text-on-surface-variant">SICK LEAVE</p>
-                  <p className="text-headline-md text-on-surface mt-1">4</p>
-                  <p className="text-caption text-on-surface-variant">of 7 remaining</p>
+                  <p className="text-headline-md text-on-surface mt-1">{sickBalance?.remaining_days ?? 0}</p>
+                  <p className="text-caption text-on-surface-variant">of {sickBalance?.allocated_days ?? 0} remaining</p>
                 </div>
-                <div className="p-3 rounded-lg bg-warning/10">
-                  <CalendarDays className="h-5 w-5 text-warning" />
+                <div className="p-3 rounded-lg bg-amber-500/10">
+                  <CalendarDays className="h-5 w-5 text-amber-500" />
                 </div>
               </div>
             </CardContent>
@@ -144,11 +176,11 @@ export default function LeaveRequests() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-label-md text-on-surface-variant">UNPAID LEAVE</p>
-                  <p className="text-headline-md text-on-surface mt-1">2</p>
+                  <p className="text-headline-md text-on-surface mt-1">{unpaidBalance?.used_days ?? 0}</p>
                   <p className="text-caption text-on-surface-variant">taken this year</p>
                 </div>
-                <div className="p-3 rounded-lg bg-info/10">
-                  <CalendarDays className="h-5 w-5 text-info" />
+                <div className="p-3 rounded-lg bg-blue-500/10">
+                  <CalendarDays className="h-5 w-5 text-blue-500" />
                 </div>
               </div>
             </CardContent>
@@ -181,24 +213,31 @@ export default function LeaveRequests() {
               <TableBody>
                 {leaves.map((leave) => (
                   <TableRow key={leave.id}>
-                    <TableCell className="font-medium">{leave.leaveType}</TableCell>
+                    <TableCell className="font-medium">{leave.leave_type}</TableCell>
                     <TableCell>
-                      {new Date(leave.startDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                      {new Date(leave.start_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                     </TableCell>
                     <TableCell>
-                      {new Date(leave.endDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                      {new Date(leave.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-on-surface-variant">
+                    <TableCell className="max-w-[200px] truncate text-muted-foreground">
                       {leave.remarks || "—"}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={leave.status} />
+                      <StatusBadge status={leave.status as any} />
                     </TableCell>
-                    <TableCell className="text-on-surface-variant">
-                      {new Date(leave.createdAt).toLocaleDateString("en-IN")}
+                    <TableCell className="text-muted-foreground">
+                      {new Date(leave.created_at).toLocaleDateString("en-IN")}
                     </TableCell>
                   </TableRow>
                 ))}
+                {leaves.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      No leave requests found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -256,11 +295,20 @@ export default function LeaveRequests() {
               />
             </div>
 
+            {errorMsg && (
+              <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/15 text-destructive text-sm font-medium">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
             <div className="flex justify-end gap-3 pt-2">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit">Submit Request</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Submit Request
+              </Button>
             </div>
           </form>
         </DialogContent>

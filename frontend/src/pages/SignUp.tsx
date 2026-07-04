@@ -8,30 +8,38 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import api from "@/lib/axios";
+import { AlertCircle } from "lucide-react";
 
 export default function SignUp() {
   const [submitted, setSubmitted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
-    setValue,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
   });
 
-  const onSubmit = (_data: SignUpFormData) => {
-    setSubmitted(true);
+  const onSubmit = async (data: SignUpFormData) => {
+    setErrorMsg(null);
+    try {
+      await api.post("/auth/signup", {
+        company_name: data.companyName,
+        full_name: data.fullName,
+        email: data.email,
+        password: data.password,
+        confirm_password: data.confirmPassword
+      });
+      setSubmitted(true);
+    } catch (error: any) {
+      setErrorMsg(error.response?.data?.detail || "An error occurred during signup");
+    }
   };
 
   if (submitted) {
@@ -74,21 +82,44 @@ export default function SignUp() {
 
         <Card className="border-t-4 border-t-primary shadow-lg border-x-border border-b-border">
           <CardContent className="pt-6">
+            {errorMsg && (
+              <div className="flex items-center gap-2 p-3 mb-6 rounded-md bg-destructive/15 text-destructive text-sm font-medium">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-              {/* Employee ID */}
+              {/* Company Name */}
               <div className="space-y-1.5">
-                <Label htmlFor="employeeId" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Employee ID</Label>
+                <Label htmlFor="companyName" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Company Name</Label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="companyName"
+                    placeholder="e.g. Odoo India"
+                    className="pl-9 h-10"
+                    {...register("companyName")}
+                  />
+                </div>
+                {errors.companyName && (
+                  <p className="text-xs text-destructive mt-1">{errors.companyName.message}</p>
+                )}
+              </div>
+
+              {/* Full Name */}
+              <div className="space-y-1.5">
+                <Label htmlFor="fullName" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Your Full Name</Label>
                 <div className="relative">
                   <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="employeeId"
-                    placeholder="e.g. EMP-001"
+                    id="fullName"
+                    placeholder="e.g. John Doe"
                     className="pl-9 h-10"
-                    {...register("employeeId")}
+                    {...register("fullName")}
                   />
                 </div>
-                {errors.employeeId && (
-                  <p className="text-xs text-destructive mt-1">{errors.employeeId.message}</p>
+                {errors.fullName && (
+                  <p className="text-xs text-destructive mt-1">{errors.fullName.message}</p>
                 )}
               </div>
 
@@ -160,25 +191,8 @@ export default function SignUp() {
                 )}
               </div>
 
-              {/* Role */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</Label>
-                <Select onValueChange={(val) => setValue("role", val as "employee" | "hr")}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="employee">Employee</SelectItem>
-                    <SelectItem value="hr">HR Officer / Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.role && (
-                  <p className="text-xs text-destructive mt-1">{errors.role.message}</p>
-                )}
-              </div>
-
-              <Button type="submit" className="w-full h-10 text-base font-medium mt-2">
-                Create Account
+              <Button type="submit" disabled={isSubmitting} className="w-full h-10 text-base font-medium mt-2">
+                {isSubmitting ? "Creating..." : "Create Account"}
               </Button>
             </form>
 

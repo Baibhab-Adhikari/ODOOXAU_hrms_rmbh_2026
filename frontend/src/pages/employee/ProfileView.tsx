@@ -1,85 +1,104 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Edit, Mail, Phone, MapPin, Briefcase, Calendar, FileText, Building2 } from "lucide-react";
+import { Edit, Mail, Phone, MapPin, Briefcase, Calendar, FileText, Building2, Loader2, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import type { Employee, Document as DocType, SalaryStructure } from "@/types";
+import api from "@/lib/axios";
+import { useAuth } from "@/contexts/AuthContext";
 
-const mockEmployee: Employee = {
-  id: "emp-001",
-  employeeCode: "EMP-001",
-  email: "rahul.sharma@company.com",
-  fullName: "Rahul Sharma",
-  phone: "+91 98765 43210",
-  address: "42, Park Avenue, Kolkata, West Bengal 700019",
-  jobTitle: "Senior Software Engineer",
-  department: "Engineering",
-  dateOfJoining: "2023-03-15",
-};
-
-const mockDocuments: DocType[] = [
-  { id: "doc-1", docType: "Resume", fileUrl: "#", uploadedAt: "2023-03-15" },
-  { id: "doc-2", docType: "ID Proof (Aadhaar)", fileUrl: "#", uploadedAt: "2023-03-15" },
-  { id: "doc-3", docType: "PAN Card", fileUrl: "#", uploadedAt: "2023-03-16" },
-  { id: "doc-4", docType: "Offer Letter", fileUrl: "#", uploadedAt: "2023-03-15" },
-  { id: "doc-5", docType: "NDA Agreement", fileUrl: "#", uploadedAt: "2023-03-20" },
-];
-
-const mockSalary: SalaryStructure = {
-  basicPay: 65000,
-  allowances: 22000,
-  deductions: 8500,
-  netPay: 78500,
-  effectiveFrom: "2026-01-01",
-};
-
-function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | null | undefined }) {
   return (
     <div className="flex items-start gap-3 py-3">
-      <Icon className="h-5 w-5 text-on-surface-variant mt-0.5 shrink-0" />
+      <Icon className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
       <div>
-        <p className="text-label-md text-on-surface-variant">{label}</p>
-        <p className="text-body-md text-on-surface mt-0.5">{value}</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</p>
+        <p className="text-sm text-foreground mt-0.5">{value || "—"}</p>
       </div>
     </div>
   );
 }
 
+
+
 export default function ProfileView() {
+  const { user } = useAuth();
+  const [employee, setEmployee] = useState<any>(null);
+  const [salary, setSalary] = useState<any>(null);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+      try {
+        const [empRes, salRes, docRes] = await Promise.allSettled([
+          api.get(`/employees/${user.id}`),
+          api.get(`/salary-structures/me`),
+          api.get(`/documents/me`),
+        ]);
+        
+        if (empRes.status === "fulfilled") setEmployee(empRes.value.data);
+        if (salRes.status === "fulfilled") setSalary(salRes.value.data);
+        if (docRes.status === "fulfilled") setDocuments(docRes.value.data);
+        
+      } catch (error) {
+        console.error("Failed to load profile", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [user]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!employee) {
+    return <div>Failed to load profile.</div>;
+  }
+
   return (
-    <div>
-            <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">My Profile</h1>
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">My Profile</h1>
+        <p className="text-muted-foreground mt-1">View and manage your personal information.</p>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         {/* Profile Header */}
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
               <Avatar className="h-24 w-24">
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary font-semibold">
-                  RS
+                <AvatarImage src={employee.profile_picture_url || ""} />
+                <AvatarFallback className="text-2xl bg-primary/10 text-primary font-semibold uppercase">
+                  {employee.full_name?.substring(0, 2) || "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h2 className="text-headline-md text-on-surface">{mockEmployee.fullName}</h2>
-                    <p className="text-body-lg text-on-surface-variant">{mockEmployee.jobTitle}</p>
+                    <h2 className="text-2xl font-bold text-foreground">{employee.full_name}</h2>
+                    <p className="text-lg text-muted-foreground">{employee.job_title}</p>
                     <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="default">{mockEmployee.department}</Badge>
-                      <Badge variant="outline">{mockEmployee.employeeCode}</Badge>
+                      <Badge variant="default">{employee.department}</Badge>
+                      <Badge variant="outline">{employee.employee_code}</Badge>
                     </div>
                   </div>
-                  <Link to="/employee/profile/edit">
-                    <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/employee/profile/edit">
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Profile
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -93,10 +112,10 @@ export default function ProfileView() {
               <CardTitle>Personal Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="divide-y divide-outline-variant/30">
-                <InfoRow icon={Mail} label="EMAIL" value={mockEmployee.email} />
-                <InfoRow icon={Phone} label="PHONE" value={mockEmployee.phone} />
-                <InfoRow icon={MapPin} label="ADDRESS" value={mockEmployee.address} />
+              <div className="divide-y divide-border">
+                <InfoRow icon={Mail} label="EMAIL" value={employee.email} />
+                <InfoRow icon={Phone} label="PHONE" value={employee.phone} />
+                <InfoRow icon={MapPin} label="ADDRESS" value={employee.address} />
               </div>
             </CardContent>
           </Card>
@@ -107,17 +126,17 @@ export default function ProfileView() {
               <CardTitle>Job Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="divide-y divide-outline-variant/30">
-                <InfoRow icon={Briefcase} label="JOB TITLE" value={mockEmployee.jobTitle} />
-                <InfoRow icon={Building2} label="DEPARTMENT" value={mockEmployee.department} />
+              <div className="divide-y divide-border">
+                <InfoRow icon={Briefcase} label="JOB TITLE" value={employee.job_title} />
+                <InfoRow icon={Building2} label="DEPARTMENT" value={employee.department} />
                 <InfoRow
                   icon={Calendar}
                   label="DATE OF JOINING"
-                  value={new Date(mockEmployee.dateOfJoining).toLocaleDateString("en-IN", {
+                  value={employee.date_of_joining ? new Date(employee.date_of_joining).toLocaleDateString("en-IN", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
-                  })}
+                  }) : "—"}
                 />
               </div>
             </CardContent>
@@ -132,30 +151,36 @@ export default function ProfileView() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-body-md text-on-surface-variant">Basic Pay</span>
-                  <span className="text-body-md text-on-surface font-medium">₹{mockSalary.basicPay.toLocaleString()}</span>
+              {salary ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm text-muted-foreground">Basic Pay</span>
+                    <span className="text-sm font-medium">₹{salary.basic_pay?.toLocaleString()}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm text-muted-foreground">Allowances</span>
+                    <span className="text-sm text-emerald-600 font-medium">+ ₹{salary.allowances?.toLocaleString()}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm text-muted-foreground">Deductions</span>
+                    <span className="text-sm text-destructive font-medium">- ₹{salary.deductions?.toLocaleString()}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center py-2 bg-muted/50 rounded-lg px-3 -mx-3">
+                    <span className="text-base font-semibold">Net Pay</span>
+                    <span className="text-lg text-primary font-bold">₹{salary.net_pay?.toLocaleString()}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Effective from {new Date(salary.effective_from).toLocaleDateString("en-IN", { year: "numeric", month: "long" })}
+                  </p>
                 </div>
-                <Separator />
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-body-md text-on-surface-variant">Allowances</span>
-                  <span className="text-body-md text-success font-medium">+ ₹{mockSalary.allowances.toLocaleString()}</span>
+              ) : (
+                <div className="text-sm text-muted-foreground py-8 text-center">
+                  No salary structure has been defined for your account yet.
                 </div>
-                <Separator />
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-body-md text-on-surface-variant">Deductions</span>
-                  <span className="text-body-md text-error font-medium">- ₹{mockSalary.deductions.toLocaleString()}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center py-2 bg-surface-container-low rounded-lg px-3 -mx-3">
-                  <span className="text-title-md text-on-surface">Net Pay</span>
-                  <span className="text-title-lg text-primary font-bold">₹{mockSalary.netPay.toLocaleString()}</span>
-                </div>
-                <p className="text-caption text-on-surface-variant mt-2">
-                  Effective from {new Date(mockSalary.effectiveFrom).toLocaleDateString("en-IN", { year: "numeric", month: "long" })}
-                </p>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -165,29 +190,44 @@ export default function ProfileView() {
               <CardTitle>Documents</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {mockDocuments.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container-low/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <FileText className="h-4 w-4 text-primary" />
+              {documents.length > 0 ? (
+                <div className="space-y-2">
+                  {documents.slice(0, 5).map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <FileText className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{doc.doc_type}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Uploaded {new Date(doc.uploaded_at).toLocaleDateString("en-IN")}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-body-md text-on-surface font-medium">{doc.docType}</p>
-                        <p className="text-caption text-on-surface-variant">
-                          Uploaded {new Date(doc.uploadedAt).toLocaleDateString("en-IN")}
-                        </p>
-                      </div>
+                      <Button variant="ghost" size="sm" className="text-primary" asChild>
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-1" /> View
+                        </a>
+                      </Button>
                     </div>
-                    <Button variant="ghost" size="sm" className="text-primary">
-                      View
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                  {documents.length > 5 && (
+                    <div className="pt-2">
+                      <Button variant="link" className="w-full" asChild>
+                        <Link to="/employee/documents">View all documents</Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground py-8 text-center">
+                  No documents found.
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

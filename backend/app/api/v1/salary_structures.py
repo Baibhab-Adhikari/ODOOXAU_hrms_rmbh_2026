@@ -11,11 +11,23 @@ from app.models.hr_officer import HROfficer
 from app.schemas.salary_structure import (
     SalaryStructureCreate,
     SalaryStructureOut,
+    SalaryStructureListOut,
     SalaryStructureUpdate,
 )
 from app.services import salary as salary_service
 
 router = APIRouter(prefix="/salary-structures", tags=["Salary Structures"])
+
+
+@router.get("", response_model=list[SalaryStructureListOut])
+async def get_all_salary_structures(
+    db: DbSession,
+    limit: int = 50,
+    offset: int = 0,
+    hr: HROfficer = Depends(require_hr_or_admin),
+) -> list[SalaryStructureListOut]:
+    """HR/Admin: list all employee salary structures."""
+    return await salary_service.get_all_salary_structures(db, limit=limit, offset=offset)
 
 
 @router.get("/me", response_model=SalaryStructureOut)

@@ -1,26 +1,90 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Users, CalendarCheck, ClipboardCheck, DollarSign, AlertCircle, CheckCircle2, Clock, Plus } from "lucide-react";
+import { Users, CalendarCheck, ClipboardCheck, DollarSign, AlertCircle, CheckCircle2, Clock, Plus, Loader2 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import api from "@/lib/axios";
 
-const pendingLeaves = [
-  { id: "1", name: "Rahul Sharma", type: "Paid", dates: "Jul 20–21", department: "Engineering" },
-  { id: "2", name: "Anita Patel", type: "Sick", dates: "Jul 8", department: "Design" },
-  { id: "3", name: "Vikram Singh", type: "Paid", dates: "Jul 15–18", department: "Marketing" },
-];
+// API Response Types
+type RecentActivity = {
+  id: string;
+  message: string;
+  type: string;
+  time: string;
+};
 
-const recentActivities = [
-  { id: "1", icon: CheckCircle2, message: "Approved Anita Patel's sick leave for Jun 28", time: "1 hour ago", color: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30" },
-  { id: "2", icon: Users, message: "New employee Neha Gupta onboarded", time: "3 hours ago", color: "text-primary bg-primary/10" },
-  { id: "3", icon: AlertCircle, message: "3 employees marked absent today", time: "5 hours ago", color: "text-destructive bg-destructive/10" },
-  { id: "4", icon: DollarSign, message: "July payroll processing initiated", time: "1 day ago", color: "text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30" },
-  { id: "5", icon: Clock, message: "Vikram Singh's leave request pending review", time: "2 days ago", color: "text-amber-600 bg-amber-100 dark:bg-amber-900/30" },
-];
+type DepartmentStat = {
+  dept: string;
+  count: number;
+  present: number;
+};
+
+type HrDashboardData = {
+  total_employees: number;
+  employees_added_this_month: number;
+  present_today: number;
+  attendance_rate: number;
+  pending_leaves: number;
+  monthly_payroll: number;
+  payroll_change_percent: number;
+  recent_activities: RecentActivity[];
+  department_stats: DepartmentStat[];
+};
+
+type PendingLeave = {
+  id: string;
+  employee_name: string;
+  department: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+};
 
 export default function HrDashboard() {
+  const [dashboard, setDashboard] = useState<HrDashboardData | null>(null);
+  const [pendingLeaves, setPendingLeaves] = useState<PendingLeave[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const [dashRes, leavesRes] = await Promise.all([
+          api.get("/dashboard/hr"),
+          api.get("/leave-requests?status=Pending&limit=5"),
+        ]);
+        setDashboard(dashRes.data);
+        setPendingLeaves(leavesRes.data);
+      } catch (error) {
+        console.error("Failed to load HR dashboard", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, []);
+
+  if (isLoading || !dashboard) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case "leave_approved": return { icon: CheckCircle2, color: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30" };
+      case "new_employee": return { icon: Users, color: "text-primary bg-primary/10" };
+      case "absent": return { icon: AlertCircle, color: "text-destructive bg-destructive/10" };
+      case "payroll": return { icon: DollarSign, color: "text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30" };
+      case "check_in": return { icon: Clock, color: "text-amber-600 bg-amber-100 dark:bg-amber-900/30" };
+      default: return { icon: Clock, color: "text-muted-foreground bg-muted" };
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -28,40 +92,42 @@ export default function HrDashboard() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard Overview</h1>
           <p className="text-muted-foreground mt-1">Here's what's happening across the organization today.</p>
         </div>
-        <Button className="shrink-0">
-          <Plus className="mr-2 h-4 w-4" /> Add Employee
-        </Button>
+        <Link to="/hr/employees">
+          <Button className="shrink-0">
+            <Plus className="mr-2 h-4 w-4" /> Add Employee
+          </Button>
+        </Link>
       </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Employees"
-          value="48"
-          caption="+3 this month"
+          value={dashboard.total_employees.toString()}
+          caption={`+${dashboard.employees_added_this_month} this month`}
           icon={Users}
-          trend="up"
+          trend={dashboard.employees_added_this_month > 0 ? "up" : "neutral"}
         />
         <StatCard
           title="Present Today"
-          value="42"
-          caption="87.5% attendance rate"
+          value={dashboard.present_today.toString()}
+          caption={`${dashboard.attendance_rate.toFixed(1)}% attendance rate`}
           icon={CalendarCheck}
           trend="up"
         />
         <StatCard
           title="Pending Leaves"
-          value="3"
+          value={dashboard.pending_leaves.toString()}
           caption="Awaiting your action"
           icon={ClipboardCheck}
           trend="neutral"
         />
         <StatCard
           title="Monthly Payroll"
-          value="₹38.2L"
-          caption="+2.1% from last month"
+          value={`₹${(dashboard.monthly_payroll / 100000).toFixed(1)}L`}
+          caption={`${dashboard.payroll_change_percent >= 0 ? '+' : ''}${dashboard.payroll_change_percent.toFixed(1)}% from last month`}
           icon={DollarSign}
-          trend="up"
+          trend={dashboard.payroll_change_percent > 0 ? "up" : dashboard.payroll_change_percent < 0 ? "down" : "neutral"}
         />
       </div>
 
@@ -90,14 +156,17 @@ export default function HrDashboard() {
                     <TableRow key={leave.id}>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium text-foreground">{leave.name}</span>
-                          <span className="text-xs text-muted-foreground">{leave.department}</span>
+                          <span className="font-medium text-foreground">{leave.employee_name}</span>
+                          <span className="text-xs text-muted-foreground">{leave.department || "N/A"}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="font-normal">{leave.type}</Badge>
+                        <Badge variant="secondary" className="font-normal">{leave.leave_type}</Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{leave.dates}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {new Date(leave.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {leave.start_date !== leave.end_date && ` - ${new Date(leave.end_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Link to="/hr/leave-approvals">
                           <Button size="sm" variant="outline" className="text-xs h-8">
@@ -107,6 +176,13 @@ export default function HrDashboard() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {pendingLeaves.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4 text-sm text-muted-foreground">
+                        No pending leave requests.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -118,21 +194,29 @@ export default function HrDashboard() {
           <Card className="h-full">
             <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-4">
               <CardTitle>Recent Activity</CardTitle>
-              <Badge variant="secondary" className="font-normal">{recentActivities.length} new</Badge>
+              <Badge variant="secondary" className="font-normal">{dashboard.recent_activities.length} new</Badge>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-6">
-                {recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-4">
-                    <div className={`mt-0.5 p-2 rounded-full shrink-0 ${activity.color}`}>
-                      <activity.icon className="h-4 w-4" />
+                {dashboard.recent_activities.map((activity) => {
+                  const { icon: Icon, color } = getActivityIcon(activity.type);
+                  return (
+                    <div key={activity.id} className="flex items-start gap-4">
+                      <div className={`mt-0.5 p-2 rounded-full shrink-0 ${color}`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0 border-b border-border pb-4 last:border-0 last:pb-0">
+                        <p className="text-sm font-medium text-foreground">{activity.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0 border-b border-border pb-4 last:border-0 last:pb-0">
-                      <p className="text-sm font-medium text-foreground">{activity.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
-                    </div>
+                  );
+                })}
+                {dashboard.recent_activities.length === 0 && (
+                  <div className="text-center py-4 text-sm text-muted-foreground">
+                    No recent activity.
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
@@ -146,16 +230,7 @@ export default function HrDashboard() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[
-              { dept: "Engineering", count: 18, present: 16 },
-              { dept: "Design", count: 8, present: 7 },
-              { dept: "Marketing", count: 10, present: 8 },
-              { dept: "Finance", count: 6, present: 6 },
-              { dept: "HR", count: 4, present: 3 },
-              { dept: "Sales", count: 12, present: 10 },
-              { dept: "Operations", count: 5, present: 5 },
-              { dept: "Legal", count: 3, present: 2 },
-            ].map((d) => (
+            {dashboard.department_stats.map((d) => (
               <div
                 key={d.dept}
                 className="p-5 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all"
@@ -168,6 +243,11 @@ export default function HrDashboard() {
                 </p>
               </div>
             ))}
+            {dashboard.department_stats.length === 0 && (
+              <div className="col-span-full text-center py-4 text-sm text-muted-foreground">
+                No department data available.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

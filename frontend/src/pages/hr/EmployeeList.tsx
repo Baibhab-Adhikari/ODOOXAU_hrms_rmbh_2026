@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Loader2, AlertCircle } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import {
@@ -15,31 +15,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Employee } from "@/types";
+import api from "@/lib/axios";
 
-const mockEmployees: Employee[] = [
-  { id: "emp-001", employeeCode: "EMP-001", email: "rahul.sharma@company.com", fullName: "Rahul Sharma", phone: "+91 98765 43210", address: "Kolkata, WB", jobTitle: "Senior Software Engineer", department: "Engineering", dateOfJoining: "2023-03-15" },
-  { id: "emp-002", employeeCode: "EMP-002", email: "anita.patel@company.com", fullName: "Anita Patel", phone: "+91 98765 43211", address: "Mumbai, MH", jobTitle: "UI/UX Designer", department: "Design", dateOfJoining: "2023-06-01" },
-  { id: "emp-003", employeeCode: "EMP-003", email: "vikram.singh@company.com", fullName: "Vikram Singh", phone: "+91 98765 43212", address: "Delhi, DL", jobTitle: "Marketing Manager", department: "Marketing", dateOfJoining: "2022-09-10" },
-  { id: "emp-004", employeeCode: "EMP-004", email: "sneha.reddy@company.com", fullName: "Sneha Reddy", phone: "+91 98765 43213", address: "Hyderabad, TS", jobTitle: "Data Analyst", department: "Engineering", dateOfJoining: "2024-01-20" },
-  { id: "emp-005", employeeCode: "EMP-005", email: "arjun.mehta@company.com", fullName: "Arjun Mehta", phone: "+91 98765 43214", address: "Bangalore, KA", jobTitle: "Backend Developer", department: "Engineering", dateOfJoining: "2023-11-05" },
-  { id: "emp-006", employeeCode: "EMP-006", email: "kavita.nair@company.com", fullName: "Kavita Nair", phone: "+91 98765 43215", address: "Chennai, TN", jobTitle: "Financial Analyst", department: "Finance", dateOfJoining: "2024-03-12" },
-  { id: "emp-007", employeeCode: "EMP-007", email: "rohan.das@company.com", fullName: "Rohan Das", phone: "+91 98765 43216", address: "Pune, MH", jobTitle: "Sales Executive", department: "Sales", dateOfJoining: "2023-07-22" },
-  { id: "emp-008", employeeCode: "EMP-008", email: "neha.gupta@company.com", fullName: "Neha Gupta", phone: "+91 98765 43217", address: "Jaipur, RJ", jobTitle: "HR Coordinator", department: "HR", dateOfJoining: "2026-07-01" },
-  { id: "emp-009", employeeCode: "EMP-009", email: "amit.joshi@company.com", fullName: "Amit Joshi", phone: "+91 98765 43218", address: "Ahmedabad, GJ", jobTitle: "DevOps Engineer", department: "Engineering", dateOfJoining: "2023-05-18" },
-  { id: "emp-010", employeeCode: "EMP-010", email: "priya.kapoor@company.com", fullName: "Priya Kapoor", phone: "+91 98765 43219", address: "Lucknow, UP", jobTitle: "Content Strategist", department: "Marketing", dateOfJoining: "2024-08-03" },
-];
+// Employee API Response type
+type Employee = {
+  id: string;
+  employee_code: string;
+  email: string;
+  full_name: string;
+  phone: string | null;
+  department: string | null;
+  job_title: string | null;
+  date_of_joining: string;
+  profile_picture_url: string | null;
+  is_active: boolean;
+  today_status: string | null;
+};
 
 const departments = ["All", "Engineering", "Design", "Marketing", "Finance", "Sales", "HR", "Operations", "Legal"];
 
 export default function EmployeeList() {
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [deptFilter, setDeptFilter] = useState("All");
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const filteredEmployees = mockEmployees.filter((emp) => {
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      setIsLoading(true);
+      try {
+        const res = await api.get("/employees?limit=500");
+        setEmployees(res.data);
+      } catch (error) {
+        console.error("Failed to load employees", error);
+        setErrorMsg("Failed to load employee directory.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchEmployees();
+  }, []);
+
+  const filteredEmployees = employees.filter((emp) => {
     const matchesSearch =
-      emp.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.employeeCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.employee_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDept = deptFilter === "All" || emp.department === deptFilter;
     return matchesSearch && matchesDept;
@@ -107,31 +128,47 @@ export default function EmployeeList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEmployees.map((emp) => (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                    </TableCell>
+                  </TableRow>
+                ) : errorMsg ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center text-destructive">
+                      <div className="flex items-center justify-center gap-2">
+                        <AlertCircle className="h-5 w-5" />
+                        {errorMsg}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredEmployees.map((emp) => (
                   <TableRow key={emp.id} className="cursor-pointer">
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium">
-                            {emp.fullName.split(" ").map((n) => n[0]).join("")}
+                          <AvatarImage src={emp.profile_picture_url || ""} />
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium uppercase">
+                            {emp.full_name.substring(0,2)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium text-on-surface">{emp.fullName}</p>
-                          <p className="text-caption text-on-surface-variant">{emp.email}</p>
+                          <p className="font-medium text-foreground">{emp.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{emp.email}</p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{emp.employeeCode}</Badge>
+                      <Badge variant="outline">{emp.employee_code}</Badge>
                     </TableCell>
-                    <TableCell className="text-on-surface-variant">{emp.department}</TableCell>
-                    <TableCell className="text-on-surface-variant">{emp.jobTitle}</TableCell>
-                    <TableCell className="text-on-surface-variant">
-                      {new Date(emp.dateOfJoining).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+                    <TableCell className="text-muted-foreground">{emp.department || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{emp.job_title || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(emp.date_of_joining).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status="Active" />
+                      <StatusBadge status={emp.is_active ? "Active" : "Inactive"} />
                     </TableCell>
                     <TableCell className="text-right">
                       <Link to={`/hr/employees/${emp.id}`}>

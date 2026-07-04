@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Clock, LogIn, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Clock, LogIn, LogOut, Loader2, AlertCircle } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,47 +7,84 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import type { Attendance as AttendanceType } from "@/types";
+import api from "@/lib/axios";
 
-const mockAttendance: AttendanceType[] = [
-  { id: "1", date: "2026-07-04", checkIn: "09:12 AM", checkOut: undefined, status: "Present" },
-  { id: "2", date: "2026-07-03", checkIn: "09:05 AM", checkOut: "06:30 PM", status: "Present" },
-  { id: "3", date: "2026-07-02", checkIn: "09:20 AM", checkOut: "06:15 PM", status: "Present" },
-  { id: "4", date: "2026-07-01", checkIn: undefined, checkOut: undefined, status: "Absent" },
-  { id: "5", date: "2026-06-30", checkIn: "09:00 AM", checkOut: "01:00 PM", status: "Half-day" },
-  { id: "6", date: "2026-06-29", checkIn: undefined, checkOut: undefined, status: "Leave" },
-  { id: "7", date: "2026-06-28", checkIn: undefined, checkOut: undefined, status: "Leave" },
-  { id: "8", date: "2026-06-27", checkIn: "08:55 AM", checkOut: "06:45 PM", status: "Present" },
-  { id: "9", date: "2026-06-26", checkIn: "09:10 AM", checkOut: "06:20 PM", status: "Present" },
-  { id: "10", date: "2026-06-25", checkIn: "09:30 AM", checkOut: "06:00 PM", status: "Present" },
-];
-
-// Build a map of dates to attendance status for calendar rendering
-const attendanceMap: Record<string, AttendanceType["status"]> = {};
-mockAttendance.forEach((a) => {
-  attendanceMap[a.date] = a.status;
-});
+// Define the API response type
+type AttendanceRecord = {
+  id: string;
+  date: string;
+  check_in: string | null;
+  check_out: string | null;
+  status: string;
+};
 
 const statusColorMap: Record<string, string> = {
-  Present: "bg-success text-white",
-  Absent: "bg-error text-white",
-  "Half-day": "bg-warning text-white",
-  Leave: "bg-info text-white",
+  present: "bg-emerald-500 text-white",
+  absent: "bg-destructive text-white",
+  "half-day": "bg-amber-500 text-white",
+  leave: "bg-blue-500 text-white",
+  holiday: "bg-purple-500 text-white",
 };
 
 export default function EmployeeAttendance() {
-  const [checkedIn, setCheckedIn] = useState(true); // Today already checked in
-  const [checkOutTime, setCheckOutTime] = useState<string | undefined>(undefined);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleCheckIn = () => {
-    setCheckedIn(true);
+  const fetchAttendance = async () => {
+    try {
+      const res = await api.get("/attendance/me");
+      setAttendance(res.data);
+    } catch (error) {
+      console.error("Failed to load attendance", error);
+      setErrorMsg("Failed to load attendance records.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleCheckOut = () => {
-    setCheckOutTime(
-      new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-    );
+  useEffect(() => {
+    fetchAttendance();
+  }, []);
+
+  const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD local time
+  const todayRecord = attendance.find(a => a.date === todayStr);
+  const isCheckedIn = !!todayRecord?.check_in;
+  const isCheckedOut = !!todayRecord?.check_out;
+
+  const handleCheckIn = async () => {
+    setErrorMsg(null);
+    setIsCheckingIn(true);
+    try {
+      await api.post("/attendance/check-in");
+      await fetchAttendance();
+    } catch (error: any) {
+      setErrorMsg(error.response?.data?.detail || "Failed to check in.");
+    } finally {
+      setIsCheckingIn(false);
+    }
   };
+
+  const handleCheckOut = async () => {
+    setErrorMsg(null);
+    setIsCheckingOut(true);
+    try {
+      await api.post("/attendance/check-out");
+      await fetchAttendance();
+    } catch (error: any) {
+      setErrorMsg(error.response?.data?.detail || "Failed to check out.");
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
+  // Build map for calendar
+  const attendanceMap: Record<string, string> = {};
+  attendance.forEach((a) => {
+    attendanceMap[a.date] = a.status.toLowerCase();
+  });
 
   return (
     <div>
@@ -57,6 +94,13 @@ export default function EmployeeAttendance() {
       </div>
 
       <div className="p-6 space-y-6">
+        {errorMsg && (
+          <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/15 text-destructive text-sm font-medium">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
         {/* Today's Check-in/out Card */}
         <Card>
           <CardContent className="p-6">
@@ -66,30 +110,32 @@ export default function EmployeeAttendance() {
                   <Clock className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-title-md text-on-surface">Today — {new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</h3>
+                  <h3 className="text-lg font-bold text-foreground">Today — {new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</h3>
                   <div className="flex items-center gap-4 mt-1">
-                    <span className="text-body-md text-on-surface-variant">
-                      Check-in: <span className="text-on-surface font-medium">{checkedIn ? "09:12 AM" : "—"}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Check-in: <span className="text-foreground font-medium">{todayRecord?.check_in ? todayRecord.check_in.substring(0,5) : "—"}</span>
                     </span>
-                    <span className="text-body-md text-on-surface-variant">
-                      Check-out: <span className="text-on-surface font-medium">{checkOutTime || "—"}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Check-out: <span className="text-foreground font-medium">{todayRecord?.check_out ? todayRecord.check_out.substring(0,5) : "—"}</span>
                     </span>
                   </div>
                 </div>
               </div>
               <div className="flex gap-3">
-                {!checkedIn ? (
-                  <Button onClick={handleCheckIn}>
-                    <LogIn className="h-4 w-4 mr-2" />
+                {isLoading ? (
+                  <Button disabled><Loader2 className="h-4 w-4 mr-2 animate-spin" />Loading...</Button>
+                ) : !isCheckedIn ? (
+                  <Button onClick={handleCheckIn} disabled={isCheckingIn}>
+                    {isCheckingIn ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <LogIn className="h-4 w-4 mr-2" />}
                     Check In
                   </Button>
-                ) : !checkOutTime ? (
-                  <Button onClick={handleCheckOut} variant="outline">
-                    <LogOut className="h-4 w-4 mr-2" />
+                ) : !isCheckedOut ? (
+                  <Button onClick={handleCheckOut} variant="outline" disabled={isCheckingOut}>
+                    {isCheckingOut ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <LogOut className="h-4 w-4 mr-2" />}
                     Check Out
                   </Button>
                 ) : (
-                  <StatusBadge status="Present" />
+                  <StatusBadge status={(todayRecord?.status as any) || "Present"} />
                 )}
               </div>
             </div>
@@ -121,7 +167,7 @@ export default function EmployeeAttendance() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockAttendance.map((record) => (
+                    {attendance.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell className="font-medium">
                           {new Date(record.date).toLocaleDateString("en-IN", {
@@ -131,13 +177,20 @@ export default function EmployeeAttendance() {
                             day: "numeric",
                           })}
                         </TableCell>
-                        <TableCell>{record.checkIn || "—"}</TableCell>
-                        <TableCell>{record.checkOut || "—"}</TableCell>
+                        <TableCell>{record.check_in ? record.check_in.substring(0,5) : "—"}</TableCell>
+                        <TableCell>{record.check_out ? record.check_out.substring(0,5) : "—"}</TableCell>
                         <TableCell>
-                          <StatusBadge status={record.status} />
+                          <StatusBadge status={record.status as any} />
                         </TableCell>
                       </TableRow>
                     ))}
+                    {attendance.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          No attendance records found.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -153,7 +206,7 @@ export default function EmployeeAttendance() {
               <CardContent>
                 <div className="grid grid-cols-7 gap-3">
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) => {
-                    const statuses: AttendanceType["status"][] = [
+                    const statuses = [
                       "Present", "Present", "Present", "Absent", "Present", "Leave", "Leave",
                     ];
                     const status = statuses[i];
@@ -163,7 +216,7 @@ export default function EmployeeAttendance() {
                         className="text-center p-4 rounded-lg border border-outline-variant/30 hover:border-primary/30 transition-colors"
                       >
                         <p className="text-label-md text-on-surface-variant mb-2">{day}</p>
-                        <StatusBadge status={status} />
+                        <StatusBadge status={status as any} />
                       </div>
                     );
                   })}
@@ -180,28 +233,30 @@ export default function EmployeeAttendance() {
               </CardHeader>
               <CardContent>
                 <Calendar
-                  className="w-full"
+                  className="w-full max-w-full"
                   renderDay={(date) => {
-                    const dateStr = date.toISOString().split("T")[0];
-                    const status = attendanceMap[dateStr];
-                    const dayNum = date.getDate();
+                    const status = attendanceMap[date.toLocaleDateString("en-CA")];
+                    let bgColor = "";
+                    let color = "text-on-surface";
+                    
+                    if (status === "present") { bgColor = "bg-emerald-500"; color = "text-white"; }
+                    else if (status === "absent") { bgColor = "bg-destructive"; color = "text-white"; }
+                    else if (status === "half-day") { bgColor = "bg-amber-500"; color = "text-white"; }
+                    else if (status === "leave") { bgColor = "bg-blue-500"; color = "text-white"; }
+                    else if (status === "holiday") { bgColor = "bg-purple-500"; color = "text-white"; }
+                    
                     return (
-                      <div
-                        className={cn(
-                          "h-10 w-full rounded-md flex items-center justify-center text-sm font-medium transition-colors",
-                          status ? statusColorMap[status] : "text-on-surface hover:bg-surface-container-low"
-                        )}
-                      >
-                        {dayNum}
+                      <div className={cn("h-10 w-full flex items-center justify-center rounded-md text-sm font-medium", bgColor, color)}>
+                        {date.getDate()}
                       </div>
                     );
                   }}
                 />
-                <div className="flex items-center gap-4 mt-4 justify-center">
+                <div className="flex flex-wrap items-center gap-4 mt-6 justify-center">
                   {Object.entries(statusColorMap).map(([label, color]) => (
                     <div key={label} className="flex items-center gap-1.5">
                       <div className={cn("h-3 w-3 rounded-full", color)} />
-                      <span className="text-caption text-on-surface-variant">{label}</span>
+                      <span className="text-xs font-medium text-muted-foreground capitalize">{label.replace("-", " ")}</span>
                     </div>
                   ))}
                 </div>

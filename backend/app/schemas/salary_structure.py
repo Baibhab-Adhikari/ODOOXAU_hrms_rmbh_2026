@@ -44,3 +44,8 @@ class SalaryStructureOut(BaseModel):
     effective_from: date
     salary_components: dict | None = None
     created_at: datetime
+
+
+class SalaryStructureListOut(SalaryStructureOut):
+    employee_name: str | None = None
+    job_title: str | None = None

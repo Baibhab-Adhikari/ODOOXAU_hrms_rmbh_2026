@@ -8,45 +8,56 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { UserRole } from "@/types";
 
-interface SignInProps {
-  onLogin: (role: UserRole) => void;
-}
 
-export default function SignIn({ onLogin }: SignInProps) {
+import { useAuth } from "@/contexts/AuthContext";
+import api from "@/lib/axios";
+import type { TokenResponse, MeResponse } from "@/types/api";
+
+export default function SignIn() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
   });
 
-  const selectedRole = watch("role");
-
-  const onSubmit = (data: SignInFormData) => {
-    if (data.email === "wrong@example.com") {
-      setLoginError("Invalid email or password. Please try again.");
-      return;
-    }
-
+  const onSubmit = async (data: SignInFormData) => {
     setLoginError(null);
-    onLogin(data.role);
-    navigate(data.role === "employee" ? "/employee/dashboard" : "/hr/dashboard");
+    try {
+      // 1. Get Token
+      const loginRes = await api.post<TokenResponse>("/auth/login", {
+        identifier: data.email,
+        password: data.password,
+      });
+
+      const token = loginRes.data.access_token;
+
+      // 2. Get User
+      const userRes = await api.get<MeResponse>("/auth/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // 3. Login & Redirect
+      login(token, userRes.data);
+      if (userRes.data.role === "hr") {
+        navigate("/hr/dashboard");
+      } else {
+        navigate("/employee/dashboard");
+      }
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        setLoginError("Invalid email/ID or password. Please try again.");
+      } else {
+        setLoginError("An unexpected error occurred. Please try again later.");
+      }
+    }
   };
 
   return (
@@ -119,25 +130,7 @@ export default function SignIn({ onLogin }: SignInProps) {
                 )}
               </div>
 
-              {/* Role */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sign in as</Label>
-                <Select
-                  value={selectedRole}
-                  onValueChange={(val) => setValue("role", val as "employee" | "hr")}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="employee">Employee</SelectItem>
-                    <SelectItem value="hr">HR Officer / Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.role && (
-                  <p className="text-xs text-destructive mt-1">{errors.role.message}</p>
-                )}
-              </div>
+
 
               <div className="flex items-center space-x-2 pt-1">
                 <input type="checkbox" id="remember" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
@@ -146,8 +139,8 @@ export default function SignIn({ onLogin }: SignInProps) {
                 </label>
               </div>
 
-              <Button type="submit" className="w-full h-10 text-base font-medium mt-2">
-                Sign In
+              <Button type="submit" disabled={isSubmitting} className="w-full h-10 text-base font-medium mt-2">
+                {isSubmitting ? "Signing In..." : "Sign In"}
               </Button>
             </form>
 

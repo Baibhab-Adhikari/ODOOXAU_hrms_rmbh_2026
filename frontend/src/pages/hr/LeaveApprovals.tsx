@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, XCircle, MessageSquare } from "lucide-react";
+import { CheckCircle2, XCircle, MessageSquare, Loader2, AlertCircle } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { leaveCommentSchema, type LeaveCommentFormData } from "@/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,20 +20,16 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { LeaveRequest } from "@/types";
+import api from "@/lib/axios";
 
-const initialLeaveRequests: LeaveRequest[] = [
-  { id: "lr-1", employeeId: "emp-001", employeeName: "Rahul Sharma", leaveType: "Paid", startDate: "2026-07-20", endDate: "2026-07-21", remarks: "Personal work", status: "Pending", createdAt: "2026-07-02" },
-  { id: "lr-2", employeeId: "emp-002", employeeName: "Anita Patel", leaveType: "Sick", startDate: "2026-07-08", endDate: "2026-07-08", remarks: "Doctor appointment", status: "Pending", createdAt: "2026-07-04" },
-  { id: "lr-3", employeeId: "emp-003", employeeName: "Vikram Singh", leaveType: "Paid", startDate: "2026-07-15", endDate: "2026-07-18", remarks: "Family vacation", status: "Pending", createdAt: "2026-07-01" },
-  { id: "lr-4", employeeId: "emp-004", employeeName: "Sneha Reddy", leaveType: "Sick", startDate: "2026-06-25", endDate: "2026-06-26", remarks: "Fever", status: "Approved", adminComment: "Get well soon!", createdAt: "2026-06-24" },
-  { id: "lr-5", employeeId: "emp-005", employeeName: "Arjun Mehta", leaveType: "Paid", startDate: "2026-07-05", endDate: "2026-07-07", remarks: "Wedding in family", status: "Approved", adminComment: "Approved. Enjoy the wedding!", createdAt: "2026-06-28" },
-  { id: "lr-6", employeeId: "emp-006", employeeName: "Kavita Nair", leaveType: "Unpaid", startDate: "2026-06-20", endDate: "2026-06-22", remarks: "Extended trip", status: "Rejected", adminComment: "Quarter close. Please reschedule.", createdAt: "2026-06-15" },
-  { id: "lr-7", employeeId: "emp-007", employeeName: "Rohan Das", leaveType: "Paid", startDate: "2026-06-10", endDate: "2026-06-12", remarks: "Moving to new apartment", status: "Approved", createdAt: "2026-06-05" },
-  { id: "lr-8", employeeId: "emp-009", employeeName: "Amit Joshi", leaveType: "Sick", startDate: "2026-07-03", endDate: "2026-07-03", remarks: "Migraine", status: "Approved", adminComment: "Take care.", createdAt: "2026-07-02" },
-];
+type LeaveRequestWithEmployee = LeaveRequest & { employeeName: string };
 
 export default function LeaveApprovals() {
-  const [leaves, setLeaves] = useState(initialLeaveRequests);
+  const [leaves, setLeaves] = useState<LeaveRequestWithEmployee[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
   const [commentDialog, setCommentDialog] = useState<{ open: boolean; leaveId: string; action: "approve" | "reject" }>({
     open: false,
     leaveId: "",
@@ -49,24 +45,70 @@ export default function LeaveApprovals() {
     resolver: zodResolver(leaveCommentSchema),
   });
 
+  const fetchLeaves = async () => {
+    setIsLoading(true);
+    try {
+      const [leavesRes, employeesRes] = await Promise.all([
+        api.get("/leave-requests?limit=500"),
+        api.get("/employees?limit=500")
+      ]);
+      const employeeMap = new Map(employeesRes.data.map((emp: any) => [emp.id, emp.full_name]));
+      const mappedLeaves = leavesRes.data.map((l: any) => ({
+        id: l.id,
+        employeeId: l.employee_id,
+        employeeName: employeeMap.get(l.employee_id) || "Unknown Employee",
+        leaveType: l.leave_type,
+        startDate: l.start_date,
+        endDate: l.end_date,
+        remarks: l.remarks,
+        status: l.status,
+        adminComment: l.admin_comment,
+        createdAt: l.created_at,
+      }));
+      setLeaves(mappedLeaves);
+    } catch (error) {
+      console.error("Failed to load leaves", error);
+      setErrorMsg("Failed to load leave requests.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaves();
+  }, []);
+
   const openCommentDialog = (leaveId: string, action: "approve" | "reject") => {
     setCommentDialog({ open: true, leaveId, action });
     reset();
   };
 
-  const onSubmitComment = (data: LeaveCommentFormData) => {
-    setLeaves((prev) =>
-      prev.map((l) =>
-        l.id === commentDialog.leaveId
-          ? {
-              ...l,
-              status: commentDialog.action === "approve" ? ("Approved" as const) : ("Rejected" as const),
-              adminComment: data.comment,
-            }
-          : l
-      )
-    );
-    setCommentDialog({ open: false, leaveId: "", action: "approve" });
+  const onSubmitComment = async (data: LeaveCommentFormData) => {
+    setIsUpdating(true);
+    try {
+      const action = commentDialog.action;
+      const res = await api.patch(`/leave-requests/${commentDialog.leaveId}/${action}`, {
+        admin_comment: data.comment,
+      });
+      
+      setLeaves((prev) =>
+        prev.map((l) =>
+          l.id === commentDialog.leaveId
+            ? {
+                ...l,
+                status: res.data.status,
+                adminComment: res.data.admin_comment,
+              }
+            : l
+        )
+      );
+      setCommentDialog({ open: false, leaveId: "", action: "approve" });
+    } catch (error: any) {
+      console.error("Failed to process leave request", error);
+      alert(error.response?.data?.detail || "Failed to process request");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const pendingLeaves = leaves.filter((l) => l.status === "Pending");
@@ -135,8 +177,8 @@ export default function LeaveApprovals() {
                 </div>
               ) : leave.adminComment ? (
                 <span className="text-caption text-on-surface-variant flex items-center gap-1">
-                  <MessageSquare className="h-3 w-3" />
-                  {leave.adminComment}
+                  <MessageSquare className="h-3 w-3 shrink-0" />
+                  <span className="truncate max-w-[150px]" title={leave.adminComment}>{leave.adminComment}</span>
                 </span>
               ) : (
                 <span className="text-caption text-on-surface-variant">—</span>
@@ -144,6 +186,13 @@ export default function LeaveApprovals() {
             </TableCell>
           </TableRow>
         ))}
+        {data.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+              No leave requests found.
+            </TableCell>
+          </TableRow>
+        )}
       </TableBody>
     </Table>
   );
@@ -160,7 +209,7 @@ export default function LeaveApprovals() {
           <TabsList>
             <TabsTrigger value="pending">
               Pending
-              {pendingLeaves.length > 0 && (
+              {!isLoading && pendingLeaves.length > 0 && (
                 <Badge variant="warning" className="ml-2">{pendingLeaves.length}</Badge>
               )}
             </TabsTrigger>
@@ -174,7 +223,16 @@ export default function LeaveApprovals() {
                 <CardTitle>Pending Leave Requests</CardTitle>
               </CardHeader>
               <CardContent>
-                {pendingLeaves.length === 0 ? (
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : errorMsg ? (
+                  <div className="text-center py-8 text-destructive">
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    {errorMsg}
+                  </div>
+                ) : pendingLeaves.length === 0 ? (
                   <div className="text-center py-12 text-on-surface-variant">
                     <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-success/50" />
                     <p className="text-body-lg">All caught up! No pending requests.</p>
@@ -237,19 +295,17 @@ export default function LeaveApprovals() {
               </Button>
               <Button
                 type="submit"
+                disabled={isUpdating}
                 className={commentDialog.action === "reject" ? "bg-error hover:bg-error/90" : ""}
               >
-                {commentDialog.action === "approve" ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Approve
-                  </>
+                {isUpdating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : commentDialog.action === "approve" ? (
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
                 ) : (
-                  <>
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject
-                  </>
+                  <XCircle className="h-4 w-4 mr-2" />
                 )}
+                {commentDialog.action === "approve" ? "Approve" : "Reject"}
               </Button>
             </div>
           </form>
