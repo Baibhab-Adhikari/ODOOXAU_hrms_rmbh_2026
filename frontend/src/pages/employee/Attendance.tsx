@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Clock, LogIn, LogOut } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,10 @@ export default function EmployeeAttendance() {
 
   return (
     <div>
-      <Topbar title="Attendance" subtitle="Track your daily attendance" role="employee" onLogout={() => {}} />
+            <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Attendance</h1>
+        <p className="text-muted-foreground mt-1">Track your daily attendance</p>
+      </div>
 
       <div className="p-6 space-y-6">
         {/* Today's Check-in/out Card */}

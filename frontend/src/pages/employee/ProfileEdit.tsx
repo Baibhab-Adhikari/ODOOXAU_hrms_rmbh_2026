@@ -2,7 +2,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
 import { profileEditSchema, type ProfileEditFormData } from "@/schemas";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,9 @@ export default function ProfileEdit() {
 
   return (
     <div>
-      <Topbar title="Edit Profile" role="employee" onLogout={() => {}} />
+            <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Edit Profile</h1>
+      </div>
 
       <div className="p-6">
         <Button variant="ghost" onClick={() => navigate("/employee/profile")} className="mb-4">

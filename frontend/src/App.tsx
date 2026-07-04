@@ -4,6 +4,7 @@ import type { UserRole } from "@/types";
 
 // Layouts
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 // Auth Pages
 import SignUp from "@/pages/SignUp";
@@ -38,61 +39,63 @@ function App() {
   };
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/signup" element={<SignUp />} />
-        <Route
-          path="/signin"
-          element={<SignIn onLogin={handleLogin} />}
-        />
+    <ThemeProvider defaultTheme="system" storageKey="hrms-theme">
+      <BrowserRouter>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/signup" element={<SignUp />} />
+          <Route
+            path="/signin"
+            element={<SignIn onLogin={handleLogin} />}
+          />
 
-        {/* Employee routes */}
-        <Route
-          path="/employee"
-          element={
-            role === "employee" ? (
-              <DashboardLayout role="employee" onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/signin" replace />
-            )
-          }
-        >
-          <Route path="dashboard" element={<EmployeeDashboard />} />
-          <Route path="profile" element={<ProfileView />} />
-          <Route path="profile/edit" element={<ProfileEdit />} />
-          <Route path="attendance" element={<EmployeeAttendance />} />
-          <Route path="leave" element={<LeaveRequests />} />
-          <Route path="salary" element={<Salary />} />
-          <Route index element={<Navigate to="dashboard" replace />} />
-        </Route>
+          {/* Employee routes */}
+          <Route
+            path="/employee"
+            element={
+              role === "employee" ? (
+                <DashboardLayout role="employee" onLogout={handleLogout} />
+              ) : (
+                <Navigate to="/signin" replace />
+              )
+            }
+          >
+            <Route path="dashboard" element={<EmployeeDashboard />} />
+            <Route path="profile" element={<ProfileView />} />
+            <Route path="profile/edit" element={<ProfileEdit />} />
+            <Route path="attendance" element={<EmployeeAttendance />} />
+            <Route path="leave" element={<LeaveRequests />} />
+            <Route path="salary" element={<Salary />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
+          </Route>
 
-        {/* HR routes */}
-        <Route
-          path="/hr"
-          element={
-            role === "hr" ? (
-              <DashboardLayout role="hr" onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/signin" replace />
-            )
-          }
-        >
-          <Route path="dashboard" element={<HrDashboard />} />
-          <Route path="employees" element={<EmployeeList />} />
-          <Route path="employees/:id" element={<EmployeeProfileView />} />
-          <Route path="employees/:id/edit" element={<EmployeeProfileEdit />} />
-          <Route path="attendance" element={<AttendanceRecords />} />
-          <Route path="leave-approvals" element={<LeaveApprovals />} />
-          <Route path="payroll" element={<Payroll />} />
-          <Route index element={<Navigate to="dashboard" replace />} />
-        </Route>
+          {/* HR routes */}
+          <Route
+            path="/hr"
+            element={
+              role === "hr" ? (
+                <DashboardLayout role="hr" onLogout={handleLogout} />
+              ) : (
+                <Navigate to="/signin" replace />
+              )
+            }
+          >
+            <Route path="dashboard" element={<HrDashboard />} />
+            <Route path="employees" element={<EmployeeList />} />
+            <Route path="employees/:id" element={<EmployeeProfileView />} />
+            <Route path="employees/:id/edit" element={<EmployeeProfileEdit />} />
+            <Route path="attendance" element={<AttendanceRecords />} />
+            <Route path="leave-approvals" element={<LeaveApprovals />} />
+            <Route path="payroll" element={<Payroll />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
+          </Route>
 
-        {/* Default redirect */}
-        <Route path="/" element={<Navigate to="/signin" replace />} />
-        <Route path="*" element={<Navigate to="/signin" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/signin" replace />} />
+          <Route path="*" element={<Navigate to="/signin" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

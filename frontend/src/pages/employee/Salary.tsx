@@ -1,5 +1,4 @@
 import { DollarSign, TrendingUp, TrendingDown, Wallet } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +28,10 @@ const deductionBreakdown = [
 export default function Salary() {
   return (
     <div>
-      <Topbar title="Salary" subtitle="Your compensation details" role="employee" onLogout={() => {}} />
+            <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Salary</h1>
+        <p className="text-muted-foreground mt-1">Your compensation details</p>
+      </div>
 
       <div className="p-6 space-y-6">
         {/* Net Pay Highlight */}

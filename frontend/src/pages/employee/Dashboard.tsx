@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
-import { User, CalendarCheck, CalendarDays, Clock, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
+import { User, CalendarCheck, CalendarDays, Clock, AlertCircle, CheckCircle2, Building2 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const recentActivities = [
   {
@@ -11,154 +11,122 @@ const recentActivities = [
     icon: CheckCircle2,
     message: "Your leave request for Jul 10–12 was approved",
     time: "2 hours ago",
-    color: "text-success",
+    color: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30",
   },
   {
     id: "2",
     icon: AlertCircle,
     message: "You were marked absent on Jun 28, 2026",
     time: "3 days ago",
-    color: "text-error",
+    color: "text-destructive bg-destructive/10",
   },
   {
     id: "3",
     icon: Clock,
     message: "Check-in recorded at 09:15 AM today",
     time: "5 hours ago",
-    color: "text-primary",
-  },
-  {
-    id: "4",
-    icon: TrendingUp,
-    message: "Your June salary slip is now available",
-    time: "1 week ago",
-    color: "text-info",
-  },
-  {
-    id: "5",
-    icon: CalendarDays,
-    message: "Leave request for Jul 20–21 is pending review",
-    time: "1 week ago",
-    color: "text-warning",
-  },
-];
-
-const quickAccessCards = [
-  {
-    to: "/employee/profile",
-    icon: User,
-    title: "My Profile",
-    description: "View and update your personal details",
-    color: "bg-primary/10 text-primary",
-  },
-  {
-    to: "/employee/attendance",
-    icon: CalendarCheck,
-    title: "Attendance",
-    description: "Check in/out and view your records",
-    color: "bg-success/10 text-success",
-  },
-  {
-    to: "/employee/leave",
-    icon: CalendarDays,
-    title: "Leave Requests",
-    description: "Apply for leave or track existing requests",
-    color: "bg-warning/10 text-warning",
-  },
-  {
-    to: "/employee/salary",
-    icon: TrendingUp,
-    title: "Salary",
-    description: "View your salary structure and payslips",
-    color: "bg-info/10 text-info",
+    color: "text-primary bg-primary/10",
   },
 ];
 
 export default function EmployeeDashboard() {
   return (
-    <div>
-      <Topbar title="Dashboard" subtitle="Welcome back, Rahul!" role="employee" onLogout={() => {}} />
-
-      <div className="p-6 space-y-8">
-        {/* Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="Days Present"
-            value="22"
-            caption="+2 from last month"
-            icon={CalendarCheck}
-            trend="up"
-          />
-          <StatCard
-            title="Leave Balance"
-            value="14"
-            caption="Paid: 8 | Sick: 4 | Unpaid: 2"
-            icon={CalendarDays}
-            trend="neutral"
-          />
-          <StatCard
-            title="Pending Requests"
-            value="1"
-            caption="Awaiting HR approval"
-            icon={Clock}
-            trend="neutral"
-          />
-          <StatCard
-            title="This Month"
-            value="96%"
-            caption="Attendance rate"
-            icon={TrendingUp}
-            trend="up"
-          />
-        </div>
-
-        {/* Quick Access */}
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-title-lg text-on-surface mb-4">Quick Access</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickAccessCards.map((card) => (
-              <Link key={card.to} to={card.to}>
-                <Card className="hover:border-primary/30 hover:shadow-[0px_8px_16px_rgba(0,0,0,0.06)] transition-all group cursor-pointer h-full">
-                  <CardContent className="p-6">
-                    <div className={`inline-flex p-3 rounded-lg ${card.color} mb-4 group-hover:scale-110 transition-transform`}>
-                      <card.icon className="h-6 w-6" />
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Good Morning, Alex!</h1>
+          <p className="text-muted-foreground mt-1">Here's what's happening today.</p>
+        </div>
+        <Button variant="outline" className="shrink-0 bg-background">
+          Request Leave
+        </Button>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="Today's Shift"
+          value="09:00"
+          caption="Clocked in 8:54 AM"
+          icon={Clock}
+        />
+        <StatCard
+          title="Annual Leave"
+          value="14"
+          caption="Days remaining out of 21"
+          icon={CalendarCheck}
+        />
+        <StatCard
+          title="Sick Leave"
+          value="5"
+          caption="Days remaining out of 10"
+          icon={AlertCircle}
+        />
+        <StatCard
+          title="Next Holiday"
+          value="Thanksgiving"
+          caption="Nov 28 - Nov 29 (2 days)"
+          icon={CalendarDays}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Activity */}
+        <div className="lg:col-span-2">
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Recent Activity</CardTitle>
+              <Link to="#" className="text-sm font-semibold text-primary hover:underline">View All</Link>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {recentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-4">
+                    <div className={`mt-0.5 p-2 rounded-full ${activity.color}`}>
+                      <activity.icon className="h-4 w-4" />
                     </div>
-                    <h3 className="text-title-md text-on-surface mb-1">{card.title}</h3>
-                    <p className="text-caption text-on-surface-variant">{card.description}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                    <div className="flex-1 min-w-0 border-b border-border pb-4 last:border-0 last:pb-0">
+                      <p className="text-sm font-medium text-foreground">{activity.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Recent Activity</span>
-              <Badge variant="secondary">{recentActivities.length} updates</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-surface-container-low/50 transition-colors"
-                >
-                  <div className={`mt-0.5 ${activity.color}`}>
-                    <activity.icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-body-md text-on-surface">{activity.message}</p>
-                    <p className="text-caption text-on-surface-variant mt-0.5">{activity.time}</p>
-                  </div>
+        {/* My Profile Quick Summary */}
+        <div>
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>My Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center text-center pb-8">
+              <div className="h-24 w-24 rounded-full bg-primary/10 mb-4 flex items-center justify-center overflow-hidden">
+                {/* Fallback avatar */}
+                <User className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">Alex Johnson</h3>
+              <p className="text-sm text-muted-foreground mb-4">Product Designer</p>
+              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">FULL TIME</Badge>
+              
+              <div className="w-full space-y-3 mt-8 text-left">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground flex items-center gap-2"><Building2 className="h-4 w-4" /> Department</span>
+                  <span className="font-medium text-foreground">Design</span>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground flex items-center gap-2"><User className="h-4 w-4" /> Employee ID</span>
+                  <span className="font-medium text-foreground">EMP-8492</span>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t border-border p-4">
+              <Button variant="ghost" className="w-full text-primary hover:text-primary/80">View Full Profile</Button>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
     </div>
   );

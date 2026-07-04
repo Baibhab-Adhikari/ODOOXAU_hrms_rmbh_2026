@@ -1,6 +1,5 @@
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Edit, Mail, Phone, MapPin, Briefcase, Calendar, FileText, Building2 } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -48,7 +47,9 @@ export default function EmployeeProfileView() {
 
   return (
     <div>
-      <Topbar title="Employee Profile" subtitle={employee.fullName} role="hr" onLogout={() => {}} />
+            <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Employee Profile</h1>
+      </div>
 
       <div className="p-6 space-y-6">
         <Button variant="ghost" onClick={() => navigate("/hr/employees")} className="mb-2">

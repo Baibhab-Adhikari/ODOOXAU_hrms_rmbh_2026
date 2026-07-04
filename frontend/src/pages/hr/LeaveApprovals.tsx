@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, XCircle, MessageSquare } from "lucide-react";
-import { Topbar } from "@/components/Topbar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { leaveCommentSchema, type LeaveCommentFormData } from "@/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,7 +150,10 @@ export default function LeaveApprovals() {
 
   return (
     <div>
-      <Topbar title="Leave Approvals" subtitle="Review and manage leave requests" role="hr" onLogout={() => {}} />
+            <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Leave Approvals</h1>
+        <p className="text-muted-foreground mt-1">Review and manage leave requests</p>
+      </div>
 
       <div className="p-6 space-y-6">
         <Tabs defaultValue="pending">
