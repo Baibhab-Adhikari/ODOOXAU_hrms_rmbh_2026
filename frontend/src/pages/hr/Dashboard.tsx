@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
-import { Users, CalendarCheck, ClipboardCheck, DollarSign, TrendingUp, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { Users, CalendarCheck, ClipboardCheck, DollarSign, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { StatCard } from "@/components/StatCard";
-import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

@@ -15,7 +15,7 @@ export const signUpSchema = z
       ),
     confirmPassword: z.string().min(1, "Please confirm your password"),
     role: z.enum(["employee", "hr"], {
-      required_error: "Please select a role",
+      message: "Please select a role",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -29,7 +29,7 @@ export const signInSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
   role: z.enum(["employee", "hr"], {
-    required_error: "Please select a role",
+    message: "Please select a role",
   }),
 });
 
@@ -63,7 +63,7 @@ export type HrProfileEditFormData = z.infer<typeof hrProfileEditSchema>;
 export const leaveApplicationSchema = z
   .object({
     leaveType: z.enum(["Paid", "Sick", "Unpaid"], {
-      required_error: "Please select a leave type",
+      message: "Please select a leave type",
     }),
     startDate: z.string().min(1, "Start date is required"),
     endDate: z.string().min(1, "End date is required"),
