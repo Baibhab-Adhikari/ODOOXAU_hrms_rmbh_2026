@@ -65,8 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         isAuthenticated: !!user,
-        isHrOrAdmin: user?.role === "hr",
-        isEmployee: user?.role === "employee",
+        isHrOrAdmin: user?.actor_type === "hr_officer",
+        isEmployee: user?.actor_type === "employee",
       }}
     >
       {children}

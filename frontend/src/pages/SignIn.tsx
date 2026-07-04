@@ -46,7 +46,7 @@ export default function SignIn() {
 
       // 3. Login & Redirect
       login(token, userRes.data);
-      if (userRes.data.role === "hr") {
+      if (userRes.data.actor_type === "hr_officer") {
         navigate("/hr/dashboard");
       } else {
         navigate("/employee/dashboard");

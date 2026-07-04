@@ -12,6 +12,7 @@ import {
 import type { UserRole } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/components/ThemeProvider";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TopbarProps {
   role: UserRole;
@@ -21,9 +22,10 @@ interface TopbarProps {
 export function Topbar({ role, onLogout }: TopbarProps) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
   
-  const userName = role === "employee" ? "Alex Johnson" : "Sarah Jenkins";
-  const userTitle = role === "employee" ? "Product Designer" : "HR Manager";
+  const userName = user?.full_name || (role === "employee" ? "Employee" : "HR Admin");
+  const userTitle = role === "employee" ? "Employee" : "HR Manager";
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b bg-background px-6 shadow-sm">

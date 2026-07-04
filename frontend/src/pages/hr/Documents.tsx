@@ -46,7 +46,7 @@ type Document = {
 const documentSchema = z.object({
   employee_id: z.string().min(1, "Employee is required"),
   doc_type: z.string().min(2, "Document type is required"),
-  file_url: z.string().url("Must be a valid URL"),
+  file: z.any().optional(),
 });
 
 type DocumentFormData = z.infer<typeof documentSchema>;
@@ -68,9 +68,9 @@ export default function Documents() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const {
-    register,
     handleSubmit,
     setValue,
     reset,
@@ -118,15 +118,29 @@ export default function Documents() {
   }, [selectedEmployeeId]);
 
   const onUpload = async (data: DocumentFormData) => {
+    if (!selectedFile) {
+      setErrorMsg("Please select a file to upload.");
+      return;
+    }
     setErrorMsg(null);
     setIsUploading(true);
     try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      const uploadRes = await api.post("/documents/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      
+      const fileUrl = uploadRes.data.file_url;
+
       await api.post("/documents", {
         employee_id: data.employee_id,
         doc_type: data.doc_type,
-        file_url: data.file_url,
+        file_url: fileUrl,
       });
-      reset({ file_url: "" }); // keep selected employee and doc type
+      
+      reset({ employee_id: data.employee_id, doc_type: data.doc_type }); 
+      setSelectedFile(null);
       if (selectedEmployeeId === data.employee_id) {
         fetchDocuments(data.employee_id);
       }
@@ -210,11 +224,14 @@ export default function Documents() {
               </div>
 
               <div className="space-y-2">
-                <Label>File URL</Label>
-                <Input placeholder="https://example.com/doc.pdf" {...register("file_url")} />
-                {errors.file_url && (
-                  <p className="text-xs text-destructive">{errors.file_url.message}</p>
-                )}
+                <Label htmlFor="file">File</Label>
+                <Input
+                  id="file"
+                  type="file"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  className="cursor-pointer"
+                />
+                {!selectedFile && <p className="text-caption text-error">Please select a file.</p>}
               </div>
 
               <Button type="submit" disabled={isUploading} className="w-full mt-2">

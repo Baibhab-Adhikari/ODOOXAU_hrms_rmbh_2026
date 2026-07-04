@@ -31,18 +31,18 @@ export type Attendance = {
   date: string;
   checkIn?: string;
   checkOut?: string;
-  status: "Present" | "Absent" | "Half-day" | "Leave";
+  status: "present" | "absent" | "on_leave";
 };
 
 export type LeaveRequest = {
   id: string;
   employeeId?: string;
   employeeName: string;
-  leaveType: "Paid" | "Sick" | "Unpaid";
+  leaveType: "paid_time_off" | "sick_leave" | "unpaid_leave";
   startDate: string;
   endDate: string;
   remarks?: string;
-  status: "Pending" | "Approved" | "Rejected";
+  status: "pending" | "approved" | "rejected";
   adminComment?: string;
   createdAt: string;
 };

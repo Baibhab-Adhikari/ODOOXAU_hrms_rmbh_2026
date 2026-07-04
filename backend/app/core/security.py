@@ -34,7 +34,6 @@ def generate_temp_password(length: int = 12) -> str:
 def create_access_token(
     sub: str,
     actor_type: str,
-    role: str | None = None,
 ) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -42,7 +41,6 @@ def create_access_token(
     payload: dict = {
         "sub": sub,
         "actor_type": actor_type,
-        "role": role,
         "exp": expire,
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)

@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import ActorType, HRRole
+from app.core.constants import ActorType
 from app.core.security import (
     create_access_token,
     hash_password,
@@ -28,8 +28,7 @@ from app.schemas.auth import (
 async def signup(db: AsyncSession, data: SignupRequest) -> TokenResponse:
     """Create/update company settings and create an HR officer.
 
-    First HR officer ever → role = 'admin'.
-    Subsequent signups → role = 'hr'.
+    Creates the first HR officer if needed.
     """
     # Check if email already exists
     existing = await db.execute(
@@ -55,17 +54,11 @@ async def signup(db: AsyncSession, data: SignupRequest) -> TokenResponse:
         if data.logo_url is not None:
             company.logo_url = data.logo_url
 
-    # Determine role — first officer is admin
-    count_result = await db.execute(select(func.count()).select_from(HROfficer))
-    officer_count = count_result.scalar_one()
-    role = HRRole.ADMIN if officer_count == 0 else HRRole.HR
-
     officer = HROfficer(
         email=data.email,
         password_hash=hash_password(data.password),
         full_name=data.full_name,
         phone=data.phone,
-        role=role,
         email_verified=True,
     )
     db.add(officer)
@@ -74,12 +67,10 @@ async def signup(db: AsyncSession, data: SignupRequest) -> TokenResponse:
     token = create_access_token(
         sub=str(officer.id),
         actor_type=ActorType.HR_OFFICER,
-        role=role,
     )
     return TokenResponse(
         access_token=token,
         actor_type=ActorType.HR_OFFICER,
-        role=role,
         must_reset_password=False,
     )
 
@@ -105,12 +96,10 @@ async def login(db: AsyncSession, data: LoginRequest) -> TokenResponse:
         token = create_access_token(
             sub=str(officer.id),
             actor_type=ActorType.HR_OFFICER,
-            role=officer.role,
         )
         return TokenResponse(
             access_token=token,
             actor_type=ActorType.HR_OFFICER,
-            role=officer.role,
             must_reset_password=False,
         )
 
@@ -136,13 +125,11 @@ async def login(db: AsyncSession, data: LoginRequest) -> TokenResponse:
         token = create_access_token(
             sub=str(employee.id),
             actor_type=ActorType.EMPLOYEE,
-            role=None,
         )
         return TokenResponse(
             access_token=token,
             actor_type=ActorType.EMPLOYEE,
-            role=None,
-            must_reset_password=employee.must_reset_password,
+            must_reset_password=getattr(employee, "must_reset_password", False),
         )
 
     raise HTTPException(
@@ -179,11 +166,9 @@ async def get_me(
     actor_type: str,
 ) -> MeResponse:
     """Return the current actor's basic info."""
-    role = getattr(actor, "role", None)
     return MeResponse(
         id=actor.id,
         full_name=actor.full_name,
         email=actor.email,
         actor_type=actor_type,
-        role=role,
     )

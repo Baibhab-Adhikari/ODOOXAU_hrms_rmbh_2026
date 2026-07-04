@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, Filter, Loader2, AlertCircle } from "lucide-react";
+import { Search, Filter, Loader2, AlertCircle, UserPlus } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -68,9 +68,17 @@ export default function EmployeeList() {
 
   return (
     <div>
-            <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Employees</h1>
-        <p className="text-muted-foreground mt-1">Manage all employee records</p>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Employees</h1>
+          <p className="text-muted-foreground mt-1">Manage all employee records</p>
+        </div>
+        <Link to="/hr/employees/new">
+          <Button>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add Employee
+          </Button>
+        </Link>
       </div>
 
       <div className="p-6 space-y-6">

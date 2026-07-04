@@ -86,6 +86,13 @@ export default function EmployeeAttendance() {
     attendanceMap[a.date] = a.status.toLowerCase();
   });
 
+  const getWeeklyDateStr = (index: number) => {
+    const curr = new Date();
+    const dayOfWeek = curr.getDay() || 7; 
+    curr.setDate(curr.getDate() - dayOfWeek + 1 + index); 
+    return curr.toLocaleDateString("en-CA");
+  };
+
   return (
     <div>
             <div className="mb-6">
@@ -206,17 +213,19 @@ export default function EmployeeAttendance() {
               <CardContent>
                 <div className="grid grid-cols-7 gap-3">
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) => {
-                    const statuses = [
-                      "Present", "Present", "Present", "Absent", "Present", "Leave", "Leave",
-                    ];
-                    const status = statuses[i];
+                    const dateStr = getWeeklyDateStr(i);
+                    const status = attendanceMap[dateStr];
                     return (
                       <div
                         key={day}
                         className="text-center p-4 rounded-lg border border-outline-variant/30 hover:border-primary/30 transition-colors"
                       >
                         <p className="text-label-md text-on-surface-variant mb-2">{day}</p>
-                        <StatusBadge status={status as any} />
+                        {status ? (
+                          <StatusBadge status={status as any} />
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
                       </div>
                     );
                   })}

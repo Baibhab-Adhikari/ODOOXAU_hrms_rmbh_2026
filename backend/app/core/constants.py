@@ -32,12 +32,6 @@ class AttendanceStatus(StrEnum):
     ON_LEAVE = "on_leave"
 
 
-# ── HR Officer roles ──
-class HRRole(StrEnum):
-    ADMIN = "admin"
-    HR = "hr"
-
-
 # ── Actor types (for JWT) ──
 class ActorType(StrEnum):
     EMPLOYEE = "employee"

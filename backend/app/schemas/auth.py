@@ -45,7 +45,6 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     actor_type: str
-    role: str | None = None
     must_reset_password: bool = False
 
 
@@ -56,4 +55,3 @@ class MeResponse(BaseModel):
     full_name: str
     email: str
     actor_type: str
-    role: str | None = None

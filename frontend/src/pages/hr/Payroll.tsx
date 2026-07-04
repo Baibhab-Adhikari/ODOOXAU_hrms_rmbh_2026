@@ -144,7 +144,8 @@ export default function Payroll() {
   };
 
   const totalPayroll = payroll.reduce((acc, p) => acc + p.netPay, 0);
-  const avgSalary = Math.round(totalPayroll / payroll.length);
+  const avgSalary = payroll.length > 0 ? Math.round(totalPayroll / payroll.length) : 0;
+  const highestPaid = payroll.length > 0 ? payroll.reduce((prev, curr) => prev.netPay > curr.netPay ? prev : curr) : null;
 
   return (
     <div>
@@ -172,8 +173,8 @@ export default function Payroll() {
           />
           <StatCard
             title="Highest Net Pay"
-            value={`₹${Math.max(...payroll.map((p) => p.netPay)).toLocaleString()}`}
-            caption="Vikram Singh"
+            value={`₹${(highestPaid?.netPay || 0).toLocaleString()}`}
+            caption={highestPaid?.employeeName || "N/A"}
             icon={DollarSign}
             trend="up"
           />

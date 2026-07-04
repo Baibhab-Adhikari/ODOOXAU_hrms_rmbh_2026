@@ -10,7 +10,7 @@ from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import ActorType, HRRole
+from app.core.constants import ActorType
 from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models.employee import Employee
@@ -79,19 +79,6 @@ async def require_hr_or_admin(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="HR officer access required",
-        )
-    return actor  # type: ignore[return-value]
-
-
-async def require_admin(
-    actor_info: CurrentActor,
-) -> HROfficer:
-    """403 unless the caller is an hr_officer with role='admin'."""
-    actor, actor_type = actor_info
-    if actor_type != ActorType.HR_OFFICER or actor.role != HRRole.ADMIN:  # type: ignore[union-attr]
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
         )
     return actor  # type: ignore[return-value]
 

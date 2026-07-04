@@ -47,7 +47,7 @@ type LeaveRequest = {
 };
 
 const leaveApplicationSchema = z.object({
-  leaveType: z.enum(["Paid", "Sick", "Unpaid"], { error_map: () => ({ message: "Please select a leave type" }) } as any),
+  leaveType: z.enum(["paid_time_off", "sick_leave", "unpaid_leave"], { error_map: () => ({ message: "Please select a leave type" }) } as any),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
   remarks: z.string().optional(),
@@ -129,9 +129,9 @@ export default function LeaveRequests() {
     return balances.find(b => b.leave_type === type);
   };
 
-  const paidBalance = getBalance("Paid");
-  const sickBalance = getBalance("Sick");
-  const unpaidBalance = getBalance("Unpaid");
+  const paidBalance = getBalance("paid_time_off");
+  const sickBalance = getBalance("sick_leave");
+  const unpaidBalance = getBalance("unpaid_leave");
 
   return (
     <div>
@@ -213,7 +213,9 @@ export default function LeaveRequests() {
               <TableBody>
                 {leaves.map((leave) => (
                   <TableRow key={leave.id}>
-                    <TableCell className="font-medium">{leave.leave_type}</TableCell>
+                    <TableCell className="font-medium">
+                      {leave.leave_type === "paid_time_off" ? "Paid" : leave.leave_type === "sick_leave" ? "Sick" : "Unpaid"}
+                    </TableCell>
                     <TableCell>
                       {new Date(leave.start_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                     </TableCell>
@@ -254,14 +256,14 @@ export default function LeaveRequests() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label>Leave Type</Label>
-              <Select onValueChange={(val) => setValue("leaveType", val as "Paid" | "Sick" | "Unpaid")}>
+              <Select onValueChange={(val) => setValue("leaveType", val as "paid_time_off" | "sick_leave" | "unpaid_leave")}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select leave type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Paid">Paid Leave</SelectItem>
-                  <SelectItem value="Sick">Sick Leave</SelectItem>
-                  <SelectItem value="Unpaid">Unpaid Leave</SelectItem>
+                  <SelectItem value="paid_time_off">Paid Leave</SelectItem>
+                  <SelectItem value="sick_leave">Sick Leave</SelectItem>
+                  <SelectItem value="unpaid_leave">Unpaid Leave</SelectItem>
                 </SelectContent>
               </Select>
               {errors.leaveType && (

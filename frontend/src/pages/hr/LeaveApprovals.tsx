@@ -111,8 +111,8 @@ export default function LeaveApprovals() {
     }
   };
 
-  const pendingLeaves = leaves.filter((l) => l.status === "Pending");
-  const processedLeaves = leaves.filter((l) => l.status !== "Pending");
+  const pendingLeaves = leaves.filter((l) => l.status === "pending");
+  const processedLeaves = leaves.filter((l) => l.status !== "pending");
 
   const LeaveTable = ({ data }: { data: LeaveRequest[] }) => (
     <Table>
@@ -156,7 +156,7 @@ export default function LeaveApprovals() {
               <StatusBadge status={leave.status} />
             </TableCell>
             <TableCell>
-              {leave.status === "Pending" ? (
+              {leave.status === "pending" ? (
                 <div className="flex gap-2">
                   <Button
                     size="sm"

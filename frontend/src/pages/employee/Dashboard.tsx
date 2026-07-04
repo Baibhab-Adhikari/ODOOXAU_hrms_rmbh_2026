@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { User, CalendarCheck, CalendarDays, Clock, AlertCircle, CheckCircle2, Building2, Loader2 } from "lucide-react";
+import { User, CalendarCheck, CalendarDays, Clock, AlertCircle, Building2, Loader2 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,29 +9,7 @@ import api from "@/lib/axios";
 import { useAuth } from "@/contexts/AuthContext";
 
 
-const recentActivities = [
-  {
-    id: "1",
-    icon: CheckCircle2,
-    message: "Your leave request for Jul 10–12 was approved",
-    time: "2 hours ago",
-    color: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30",
-  },
-  {
-    id: "2",
-    icon: AlertCircle,
-    message: "You were marked absent on Jun 28, 2026",
-    time: "3 days ago",
-    color: "text-destructive bg-destructive/10",
-  },
-  {
-    id: "3",
-    icon: Clock,
-    message: "Check-in recorded at 09:15 AM today",
-    time: "5 hours ago",
-    color: "text-primary bg-primary/10",
-  },
-];
+const recentActivities: any[] = [];
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
@@ -127,6 +105,11 @@ export default function EmployeeDashboard() {
                     </div>
                   </div>
                 ))}
+                {recentActivities.length === 0 && (
+                  <div className="text-center py-4 text-sm text-muted-foreground">
+                    No recent activity.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

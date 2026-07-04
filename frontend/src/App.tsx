@@ -37,7 +37,7 @@ function RootRedirect() {
 
   if (isLoading) return null;
   if (!isAuthenticated || !user) return <Navigate to="/signin" replace />;
-  if (user.role === "hr") return <Navigate to="/hr/dashboard" replace />;
+  if (user.actor_type === "hr_officer") return <Navigate to="/hr/dashboard" replace />;
   return <Navigate to="/employee/dashboard" replace />;
 }
 
@@ -51,7 +51,7 @@ function App() {
             <Route path="/signup" element={<SignUp />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/change-password" element={
-              <ProtectedRoute allowedRoles={["employee", "hr"]}>
+              <ProtectedRoute allowedRoles={["employee", "hr_officer"]}>
                 <ChangePassword />
               </ProtectedRoute>
             } />
@@ -79,7 +79,7 @@ function App() {
             <Route
               path="/hr"
               element={
-                <ProtectedRoute allowedRoles={["hr"]}>
+                <ProtectedRoute allowedRoles={["hr_officer"]}>
                   <DashboardLayout role="hr" />
                 </ProtectedRoute>
               }

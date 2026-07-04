@@ -4,7 +4,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
-from app.core.deps import DbSession, require_admin
+from app.core.deps import DbSession, require_hr_or_admin
 from app.models.company_settings import CompanySettings
 from app.models.hr_officer import HROfficer
 from app.schemas.company import CompanySettingsOut, CompanySettingsUpdate
@@ -29,7 +29,7 @@ async def get_company_settings(db: DbSession) -> CompanySettingsOut:
 async def update_company_settings(
     data: CompanySettingsUpdate,
     db: DbSession,
-    admin: HROfficer = Depends(require_admin),
+    admin: HROfficer = Depends(require_hr_or_admin),
 ) -> CompanySettingsOut:
     """Admin only: update company name/logo."""
     result = await db.execute(select(CompanySettings).limit(1))

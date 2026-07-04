@@ -37,7 +37,7 @@ type Document = {
 
 const documentSchema = z.object({
   doc_type: z.string().min(2, "Document type is required"),
-  file_url: z.string().url("Must be a valid URL"),
+  file: z.any().optional(), // File object
 });
 
 type DocumentFormData = z.infer<typeof documentSchema>;
@@ -58,13 +58,13 @@ export default function EmployeeDocuments() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const {
-    register,
     handleSubmit,
     setValue,
-    reset,
     watch,
+    reset,
     formState: { errors },
   } = useForm<DocumentFormData>({
     resolver: zodResolver(documentSchema),
@@ -89,15 +89,31 @@ export default function EmployeeDocuments() {
 
   const onUpload = async (data: DocumentFormData) => {
     if (!user) return;
+    if (!selectedFile) {
+      setErrorMsg("Please select a file to upload.");
+      return;
+    }
     setErrorMsg(null);
     setIsUploading(true);
     try {
+      // 1. Upload file
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      const uploadRes = await api.post("/documents/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      
+      const fileUrl = uploadRes.data.file_url;
+
+      // 2. Create document record
       await api.post("/documents", {
         employee_id: user.id,
         doc_type: data.doc_type,
-        file_url: data.file_url,
+        file_url: fileUrl,
       });
-      reset({ file_url: "" });
+      
+      reset();
+      setSelectedFile(null);
       fetchDocuments();
     } catch (error: any) {
       setErrorMsg(error.response?.data?.detail || "Failed to upload document.");
@@ -158,11 +174,14 @@ export default function EmployeeDocuments() {
               </div>
 
               <div className="space-y-2">
-                <Label>File URL</Label>
-                <Input placeholder="https://example.com/doc.pdf" {...register("file_url")} />
-                {errors.file_url && (
-                  <p className="text-xs text-destructive">{errors.file_url.message}</p>
-                )}
+                <Label htmlFor="file">File</Label>
+                <Input
+                  id="file"
+                  type="file"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  className="cursor-pointer"
+                />
+                {!selectedFile && <p className="text-xs text-destructive">Please select a file.</p>}
               </div>
 
               <Button type="submit" disabled={isUploading} className="w-full mt-2">

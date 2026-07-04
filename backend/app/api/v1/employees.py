@@ -18,7 +18,6 @@ from app.core.deps import (
     CurrentActor,
     DbSession,
     check_self_or_hr,
-    require_admin,
     require_hr_or_admin,
 )
 from app.core.security import generate_temp_password, hash_password
@@ -207,7 +206,7 @@ async def update_employee(
 async def deactivate_employee(
     employee_id: uuid.UUID,
     db: DbSession,
-    admin: HROfficer = Depends(require_admin),
+    admin: HROfficer = Depends(require_hr_or_admin),
 ) -> EmployeeOut:
     """Admin only: soft-delete by setting is_active = false."""
     result = await db.execute(
