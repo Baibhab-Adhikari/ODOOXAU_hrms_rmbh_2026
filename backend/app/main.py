@@ -5,6 +5,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 from app.core.config import settings
 from app.db.base import Base
@@ -58,6 +60,10 @@ app.include_router(leave_balances_router)
 app.include_router(salary_router)
 app.include_router(documents_router)
 app.include_router(dashboard_router)
+
+# Ensure upload dir exists
+os.makedirs("/app/uploads", exist_ok=True)
+app.mount("/static/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
 
 
 @app.get("/", tags=["Health"])

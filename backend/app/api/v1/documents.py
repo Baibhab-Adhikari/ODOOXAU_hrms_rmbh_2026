@@ -3,8 +3,13 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy import select
+import os
+import shutil
+
+UPLOAD_DIR = "/app/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 from app.core.constants import ActorType
 from app.core.deps import CurrentActor, DbSession, require_employee, require_hr_or_admin
@@ -14,6 +19,22 @@ from app.models.hr_officer import HROfficer
 from app.schemas.document import DocumentCreate, DocumentOut
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
+
+
+@router.post("/upload", status_code=201)
+async def upload_document(
+    actor_info: CurrentActor,
+    file: UploadFile = File(...),
+) -> dict:
+    """Upload a file to the server and return its static URL."""
+    file_ext = os.path.splitext(file.filename or "")[1]
+    unique_filename = f"{uuid.uuid4().hex}{file_ext}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {"file_url": f"http://localhost:8000/static/uploads/{unique_filename}"}
 
 
 @router.post("", response_model=DocumentOut, status_code=201)
